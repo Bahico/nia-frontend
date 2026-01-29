@@ -1,12 +1,12 @@
 import 'react-native-reanimated';
 
-import {Ionicons} from '@expo/vector-icons';
-import {Tabs} from 'expo-router';
-import {View} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 
-import {HapticTab} from '@/components/haptic-tab';
-import {Colors} from '@/constants/theme';
-import {useColorScheme} from '@/hooks/use-color-scheme';
+import { HapticTab } from '@/components/haptic-tab';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import '../global.css';
 
 export default function RootLayout() {
@@ -51,12 +51,12 @@ export default function RootLayout() {
                 }}
             />
             <Tabs.Screen
-                name="search"
+                name="record"
                 options={{
-                    title: 'Search',
+                    title: 'Record',
                     tabBarIcon: ({focused, color}) => (
                         <TabIcon
-                            name="search"
+                            name="mic"
                             focused={focused}
                             color={color}
                             accent={text}
@@ -65,12 +65,12 @@ export default function RootLayout() {
                 }}
             />
             <Tabs.Screen
-                name="notifications"
+                name="history"
                 options={{
-                    title: 'Notifications',
+                    title: 'History',
                     tabBarIcon: ({focused, color}) => (
                         <TabIcon
-                            name="notifications-outline"
+                            name="time"
                             focused={focused}
                             color={color}
                             accent={text}
@@ -100,9 +100,9 @@ type TabIconProps = {
     name:
         | keyof typeof Ionicons.glyphMap
         | 'home'
-        | 'search'
-        | 'notifications-outline'
-        | 'person-outline';
+        | 'person-outline'
+        | 'mic'
+        | 'time';
     focused: boolean;
     color: string;
     accent: string;
