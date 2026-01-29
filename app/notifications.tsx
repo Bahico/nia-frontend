@@ -3,13 +3,13 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-export default function IndexScreen() {
+export default function NotificationsScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.content}>
-        <ThemedText type="title">Home</ThemedText>
+        <ThemedText type="title">Notifications</ThemedText>
         <ThemedText style={styles.subtitle}>
-          This is your home screen. Use the tabs below to navigate.
+          Your alerts, messages, and updates will appear here.
         </ThemedText>
       </View>
     </ThemedView>

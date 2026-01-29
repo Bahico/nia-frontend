@@ -3,13 +3,13 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-export default function IndexScreen() {
+export default function SearchScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.content}>
-        <ThemedText type="title">Home</ThemedText>
+        <ThemedText type="title">Search</ThemedText>
         <ThemedText style={styles.subtitle}>
-          This is your home screen. Use the tabs below to navigate.
+          This is where your search experience will live.
         </ThemedText>
       </View>
     </ThemedView>
