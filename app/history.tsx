@@ -10,12 +10,12 @@ import { deleteRecording, getAllRecordings } from '@/utils/recording-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Modal,
-    RefreshControl,
-    StyleSheet,
-    View
+  Alert,
+  FlatList,
+  Modal,
+  RefreshControl,
+  StyleSheet,
+  View
 } from 'react-native';
 
 export default function HistoryScreen() {
@@ -129,6 +129,70 @@ export default function HistoryScreen() {
   return (
     <ThemedView style={styles.container}>
       <ResponsiveContainer>
+      <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            History
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
+          </ThemedText>
+        </View>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            History
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
+          </ThemedText>
+        </View>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            History
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
+          </ThemedText>
+        </View>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            History
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
+          </ThemedText>
+        </View>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            History
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
+          </ThemedText>
+        </View>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            History
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
+          </ThemedText>
+        </View>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            History
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
+          </ThemedText>
+        </View>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            History
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
+          </ThemedText>
+        </View>
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
             History
@@ -177,7 +241,9 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
+    // paddingTop: 2000,
+    paddingBottom: 2000,
+    overflow: 'scroll',
   },
   header: {
     paddingTop: 16,
