@@ -1,26 +1,26 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
 } from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
 import { ResponsiveContainer } from '@/components/responsive-container';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/auth-context';
-import { useThemeColor } from '@/hooks/use-theme-color';
 import { useResponsive, useResponsiveValue } from '@/hooks/use-responsive';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,14 +36,14 @@ export default function LoginScreen() {
   const fontSize = useResponsiveValue({ mobile: 16, tablet: 17, desktop: 18 });
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(username.trim(), password);
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'An error occurred during login');
     } finally {
@@ -72,18 +72,17 @@ export default function LoginScreen() {
             <ThemedView style={styles.form}>
               <ThemedView style={styles.inputContainer}>
                 <Ionicons
-                  name="mail-outline"
+                  name="person-outline"
                   size={20}
                   color={textColor}
                   style={styles.inputIcon}
                 />
                 <TextInput
                   style={[styles.input, { padding: inputPadding, fontSize, color: textColor }]}
-                  placeholder="Email"
+                  placeholder="Username"
                   placeholderTextColor={textColor + '80'}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
+                  value={username}
+                  onChangeText={setUsername}
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}

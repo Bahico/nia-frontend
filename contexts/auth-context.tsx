@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 const AUTH_STORAGE_KEY = '@auth_user';
 const AUTH_TOKEN_KEY = '@auth_token';
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://192.168.0.100:8080/api';
 
 export interface User {
   id: string;
@@ -16,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -53,11 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string) => {
     try {
       // Basic validation
-      if (!email || !password) {
-        throw new Error('Email and password are required');
+      if (!username || !password) {
+        throw new Error('Username and password are required');
       }
 
       // Call backend API
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: email.trim(),
+          username: username.trim(),
           password,
         }),
       });
@@ -88,8 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store user data and token
       const userData: User = {
         id: data.user?.id || data.id || Date.now().toString(),
-        email: data.user?.email || data.email || email.trim(),
-        name: data.user?.name || data.name,
+        email: data.user?.email || data.email || data.username || username.trim(),
+        name: data.user?.name || data.name || data.username || username.trim(),
       };
 
       const authToken = data.id_token || data.token || data.accessToken || data.access_token;

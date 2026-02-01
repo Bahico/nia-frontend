@@ -3,12 +3,12 @@ import { Audio } from 'expo-av';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import { ResponsiveContainer } from '@/components/responsive-container';
@@ -16,6 +16,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { apiPostFormData } from '@/utils/api-client';
 import { saveRecording } from '@/utils/recording-storage';
 
 export default function RecordScreen() {
@@ -127,12 +128,68 @@ export default function RecordScreen() {
   const saveRecordingToStorage = async (uri: string, duration: number) => {
     setIsSaving(true);
     try {
+      // Validate URI exists
+      if (!uri) {
+        throw new Error('No recording file found. Please try recording again.');
+      }
+
+      // Verify file exists before attempting to upload
+      // const fileResponse = await fetch(uri);
+      // const blob = (await fileResponse.blob() as any)._data;
+
+      // Use mp3 format with standard MIME type
+      const filename = `recording-${Date.now()}.mp3`;
+      const mimeType = 'audio/mpeg'; // Standard mp3 MIME type
+      
+      // Create FormData for API request
+      // React Native FormData accepts an object with uri, type, and name
+      // This ensures the file is sent with the correct MIME type (mp3)
+      const formData = new FormData();
+
+      const uriParts = uri.split('.');
+      const fileType = uriParts[uriParts.length - 1];
+      
+      // Append audio file using React Native FormData format (required)
+      formData.append('audioFile', {
+        uri,
+        name: `recording.${fileType}`,
+        type: `audio/x-${fileType}`,
+      } as any);
+      
+      // Append transcriptModel (required) - set to GROQ
+      formData.append('transcriptModel', 'GROQ');
+      
+      // Context is optional, so we skip it for now
+      // If you need to add context later, you can add:
+      // formData.append('context', contextString);
+
+      // Send to backend API
+      try {
+        console.log('nice');
+        console.log(formData.get('audioFile'));
+        
+        const apiResponse = await apiPostFormData('/transcript', formData);
+        console.log('Recording uploaded successfully:', apiResponse);
+      } catch (apiError: any) {
+        // Handle specific API errors
+        if (apiError?.message?.includes('Authentication') || apiError?.message?.includes('token')) {
+          throw new Error('Authentication failed. Please log in again.');
+        } else if (apiError?.message?.includes('Network') || apiError?.message?.includes('fetch')) {
+          throw new Error('Network error. Please check your connection and try again.');
+        } else if (apiError?.message) {
+          throw new Error(`Upload failed: ${apiError.message}`);
+        } else {
+          throw new Error('Failed to upload recording. Please try again.');
+        }
+      }
+      
+      // Save recording locally after successful upload
       await saveRecording(uri, duration);
       setDuration(0);
 
       Alert.alert(
         'Recording Saved',
-        'Your recording has been saved successfully.',
+        'Your recording has been saved and is being processed.',
         [
           {
             text: 'View History',
@@ -144,21 +201,21 @@ export default function RecordScreen() {
           },
         ]
       );
-
-      // TODO: Backend Integration
-      // Send audio file to backend API
-      // Example:
-      // const formData = new FormData();
-      // formData.append('audio', { uri, type: 'audio/m4a', name: 'recording.m4a' });
-      // const response = await fetch('YOUR_API_ENDPOINT', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      // const { summary, title, backendId } = await response.json();
-      // await updateRecording(recording.id, { summary, title, backendId, status: 'processed' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving recording:', error);
-      Alert.alert('Error', 'Failed to save recording. Please try again.');
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'Failed to save recording. Please try again.';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSaving(false);
     }
