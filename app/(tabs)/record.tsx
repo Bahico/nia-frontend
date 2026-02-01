@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    ScrollView,
     StyleSheet,
     TouchableOpacity,
     View
@@ -175,10 +176,15 @@ export default function RecordScreen() {
     return (
       <ThemedView style={styles.container}>
         <ResponsiveContainer>
-          <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color={accentColor} />
-            <ThemedText style={styles.loadingText}>Requesting permissions...</ThemedText>
-          </View>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+          >
+            <View style={styles.centerContent}>
+              <ActivityIndicator size="large" color={accentColor} />
+              <ThemedText style={styles.loadingText}>Requesting permissions...</ThemedText>
+            </View>
+          </ScrollView>
         </ResponsiveContainer>
       </ThemedView>
     );
@@ -188,21 +194,26 @@ export default function RecordScreen() {
     return (
       <ThemedView style={styles.container}>
         <ResponsiveContainer>
-          <View style={styles.centerContent}>
-            <Ionicons name="mic-off" size={64} color={textColor} style={styles.icon} />
-            <ThemedText type="title" style={styles.errorTitle}>
-              Microphone Access Required
-            </ThemedText>
-            <ThemedText style={styles.errorText}>
-              Please enable microphone permissions in your device settings to record audio.
-            </ThemedText>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: accentColor }]}
-              onPress={requestPermissions}
-            >
-              <ThemedText style={styles.buttonText}>Grant Permission</ThemedText>
-            </TouchableOpacity>
-          </View>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+          >
+            <View style={styles.centerContent}>
+              <Ionicons name="mic-off" size={64} color={textColor} style={styles.icon} />
+              <ThemedText type="title" style={styles.errorTitle}>
+                Microphone Access Required
+              </ThemedText>
+              <ThemedText style={styles.errorText}>
+                Please enable microphone permissions in your device settings to record audio.
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: accentColor }]}
+                onPress={requestPermissions}
+              >
+                <ThemedText style={styles.buttonText}>Grant Permission</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </ResponsiveContainer>
       </ThemedView>
     );
@@ -211,66 +222,71 @@ export default function RecordScreen() {
   return (
     <ThemedView style={styles.container}>
       <ResponsiveContainer>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <ThemedText type="title" style={styles.title}>
-              Record Voice
-            </ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Tap the button below to start recording
-            </ThemedText>
-          </View>
-
-          <View style={styles.recordingArea}>
-            {/* Timer Display */}
-            <View style={styles.timerContainer}>
-              <ThemedText
-                type="title"
-                style={[
-                  styles.timer,
-                  isRecording && styles.timerRecording,
-                  { color: isRecording ? accentColor : textColor },
-                ]}
-              >
-                {formatTime(duration)}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+        >
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <ThemedText type="title" style={styles.title}>
+                Record Voice
               </ThemedText>
-              {isRecording && (
-                <View style={[styles.recordingIndicator, { backgroundColor: accentColor }]} />
-              )}
+              <ThemedText style={styles.subtitle}>
+                Tap the button below to start recording
+              </ThemedText>
             </View>
 
-            {/* Record Button */}
-            <TouchableOpacity
-              style={[
-                styles.recordButton,
-                isRecording && styles.recordButtonRecording,
-                { borderColor: accentColor },
-                isRecording && { backgroundColor: accentColor },
-              ]}
-              onPress={handleRecordPress}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <ActivityIndicator size="large" color={textColor} />
-              ) : (
-                <Ionicons
-                  name={isRecording ? 'stop' : 'mic'}
-                  size={isMobile ? 48 : 64}
-                  color={isRecording ? textColor : accentColor}
-                />
-              )}
-            </TouchableOpacity>
+            <View style={styles.recordingArea}>
+              {/* Timer Display */}
+              <View style={styles.timerContainer}>
+                <ThemedText
+                  type="title"
+                  style={[
+                    styles.timer,
+                    isRecording && styles.timerRecording,
+                    { color: isRecording ? accentColor : textColor },
+                  ]}
+                >
+                  {formatTime(duration)}
+                </ThemedText>
+                {isRecording && (
+                  <View style={[styles.recordingIndicator, { backgroundColor: accentColor }]} />
+                )}
+              </View>
 
-            {/* Status Text */}
-            <ThemedText style={styles.statusText}>
-              {isSaving
-                ? 'Saving...'
-                : isRecording
-                  ? 'Recording in progress'
-                  : 'Ready to record'}
-            </ThemedText>
+              {/* Record Button */}
+              <TouchableOpacity
+                style={[
+                  styles.recordButton,
+                  isRecording && styles.recordButtonRecording,
+                  { borderColor: accentColor },
+                  isRecording && { backgroundColor: accentColor },
+                ]}
+                onPress={handleRecordPress}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="large" color={textColor} />
+                ) : (
+                  <Ionicons
+                    name={isRecording ? 'stop' : 'mic'}
+                    size={isMobile ? 48 : 64}
+                    color={isRecording ? textColor : accentColor}
+                  />
+                )}
+              </TouchableOpacity>
+
+              {/* Status Text */}
+              <ThemedText style={styles.statusText}>
+                {isSaving
+                  ? 'Saving...'
+                  : isRecording
+                    ? 'Recording in progress'
+                    : 'Ready to record'}
+              </ThemedText>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </ResponsiveContainer>
     </ThemedView>
   );
@@ -279,6 +295,9 @@ export default function RecordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,

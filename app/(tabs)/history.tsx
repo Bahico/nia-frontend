@@ -129,70 +129,6 @@ export default function HistoryScreen() {
   return (
     <ThemedView style={styles.container}>
       <ResponsiveContainer>
-      <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            History
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
-          </ThemedText>
-        </View>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            History
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
-          </ThemedText>
-        </View>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            History
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
-          </ThemedText>
-        </View>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            History
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
-          </ThemedText>
-        </View>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            History
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
-          </ThemedText>
-        </View>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            History
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
-          </ThemedText>
-        </View>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            History
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
-          </ThemedText>
-        </View>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            History
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            {recordings.length} {recordings.length === 1 ? 'recording' : 'recordings'}
-          </ThemedText>
-        </View>
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
             History
@@ -217,6 +153,7 @@ export default function HistoryScreen() {
           numColumns={numColumns}
           columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
           key={numColumns} // Force re-render when columns change
+          showsVerticalScrollIndicator={true}
         />
       </ResponsiveContainer>
 
@@ -241,9 +178,6 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // paddingTop: 2000,
-    paddingBottom: 2000,
-    overflow: 'scroll',
   },
   header: {
     paddingTop: 16,

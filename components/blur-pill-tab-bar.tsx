@@ -6,10 +6,14 @@ import { BlurView } from 'expo-blur';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useResponsiveValue } from '@/hooks/use-responsive';
 
 export function BlurPillTabBar(props: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme() ?? 'light';
+  const tabBarBackground = Colors[colorScheme].tabBarBackground;
   const marginHorizontal = useResponsiveValue({
     mobile: 16,
     tablet: 24,
@@ -43,7 +47,7 @@ export function BlurPillTabBar(props: BottomTabBarProps) {
         ]}
       >
         {Platform.OS === 'web' ? (
-          <View style={[StyleSheet.absoluteFill, styles.webFallback]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: tabBarBackground }]} />
         ) : (
           <BlurView
             intensity={80}
@@ -69,8 +73,5 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 40,
     width: '100%',
-  },
-  webFallback: {
-    backgroundColor: 'rgba(44, 47, 56, 0.85)',
   },
 });

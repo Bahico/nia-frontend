@@ -1,135 +1,71 @@
 import 'react-native-reanimated';
 
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import { View } from 'react-native';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 
-import { BlurPillTabBar } from '@/components/blur-pill-tab-bar';
-import { HapticTab } from '@/components/haptic-tab';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AuthProvider, useAuth } from '@/contexts/auth-context';
+import { ThemedView } from '@/components/themed-view';
 import '../global.css';
 
+function RootLayoutNav() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === '(tabs)';
+    const inAuthScreen = segments[0] === 'login' || segments[0] === 'register';
+
+    if (!isAuthenticated) {
+      // Redirect to login if not authenticated
+      if (inAuthGroup) {
+        router.replace('/login');
+      } else if (!inAuthScreen) {
+        router.replace('/login');
+      }
+    } else if (isAuthenticated) {
+      // Redirect to tabs if authenticated but on auth screens
+      if (inAuthScreen) {
+        router.replace('/(tabs)');
+      } else if (segments.length === 0) {
+        // Initial load - redirect to tabs
+        router.replace('/(tabs)');
+      }
+    }
+  }, [isAuthenticated, isLoading, segments]);
+
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#F6E34C" />
+      </ThemedView>
+    );
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="login" />
+      <Stack.Screen name="register" />
+      <Stack.Screen name="(tabs)" />
+    </Stack>
+  );
+}
+
 export default function RootLayout() {
-    const colorScheme = useColorScheme() ?? 'light';
-
-    const text = Colors[colorScheme].text;
-    const inactiveIcon = Colors[colorScheme].tabIconDefault;
-
-    return (
-        <Tabs
-            screenOptions={{
-                headerShown: false,
-                tabBarActiveTintColor: text,
-                tabBarInactiveTintColor: inactiveIcon,
-                tabBar: (props) => <BlurPillTabBar {...props} />,
-                tabBarStyle: {
-                    backgroundColor: 'transparent',
-                    borderTopWidth: 0,
-                    elevation: 0,
-                    shadowOpacity: 0,
-                    height: 80,
-                    justifyContent: 'space-between',
-                    paddingBottom: 10,
-                    paddingTop: 10,
-                },
-                tabBarLabelStyle: {
-                    fontSize: 12,
-                },
-                tabBarButton: (props) => <HapticTab {...props} />,
-            }}>
-            <Tabs.Screen
-                name="index"
-                options={{
-                    title: 'Home',
-                    tabBarIcon: ({focused, color}) => (
-                        <TabIcon
-                            name="home"
-                            focused={focused}
-                            color={color}
-                            accent={text}
-                        />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="record"
-                options={{
-                    title: 'Record',
-                    tabBarIcon: ({focused, color}) => (
-                        <TabIcon
-                            name="mic"
-                            focused={focused}
-                            color={color}
-                            accent={text}
-                        />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="history"
-                options={{
-                    title: 'History',
-                    tabBarIcon: ({focused, color}) => (
-                        <TabIcon
-                            name="time"
-                            focused={focused}
-                            color={color}
-                            accent={text}
-                        />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="profile"
-                options={{
-                    title: 'Profile',
-                    tabBarIcon: ({focused, color}) => (
-                        <TabIcon
-                            name="person-outline"
-                            focused={focused}
-                            color={color}
-                            accent={text}
-                        />
-                    ),
-                }}
-            />
-        </Tabs>
-    );
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
 }
 
-type TabIconProps = {
-    name:
-        | keyof typeof Ionicons.glyphMap
-        | 'home'
-        | 'person-outline'
-        | 'mic'
-        | 'time';
-    focused: boolean;
-    color: string;
-    accent: string;
-};
-
-function TabIcon({name, focused, color, accent}: TabIconProps) {
-    const tint = focused ? accent : color;
-
-    return (
-        <View style={{alignItems: 'center', justifyContent: 'center', gap: 2}}>
-            <View
-                style={{
-                    width: 32,
-                    height: 3,
-                    borderRadius: 999,
-                    backgroundColor: accent,
-                    marginBottom: 2,
-                    opacity: focused ? 1 : 0,
-                }}
-            />
-            <Ionicons
-                name={name as keyof typeof Ionicons.glyphMap}
-                size={22}
-                color={tint}
-            />
-        </View>
-    );
-}
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
