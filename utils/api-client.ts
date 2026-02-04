@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {API_BASE_URL} from "@/constants/api-url";
 
-const API_BASE_URL = 'http://192.168.0.100:8080/api';
 const AUTH_TOKEN_KEY = '@auth_token';
 
 export interface ApiOptions extends RequestInit {
@@ -163,14 +163,15 @@ export async function apiPostFormData<T = any>(
   // Make request - don't set Content-Type, let the browser/React Native set it with boundary
   let response: Response;
   try {
-    console.log('working');
-    
+    console.log('working', formData);
+    console.log(url)
     response = await fetch(url, {
       ...fetchOptions,
       method: 'POST',
       body: formData,
       headers: {
         ...authHeaders,
+        'Content-Type': 'multipart/form-data',
         // Don't set Content-Type - let the browser/React Native set it automatically with boundary
       },
     });

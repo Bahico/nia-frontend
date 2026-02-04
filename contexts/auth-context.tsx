@@ -1,10 +1,10 @@
+import { API_BASE_URL } from "@/constants/api-url";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 const AUTH_STORAGE_KEY = '@auth_user';
 const AUTH_TOKEN_KEY = '@auth_token';
-const API_BASE_URL = 'http://192.168.0.100:8080/api';
 
 export interface User {
   id: string;

@@ -1,35 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View
-} from 'react-native';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+
 
 import { ResponsiveContainer } from '@/components/responsive-container';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { apiPostFormData } from '@/utils/api-client';
-import { saveRecording } from '@/utils/recording-storage';
+import { sendRecordedFile } from "@/services/record.service";
+import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from "expo-audio";
 
 export default function RecordScreen() {
-  const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const intervalRef = useRef<number | null>(null);
+  const router = useRouter();
+
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder);
 
   const { isMobile } = useResponsive();
   const accentColor = useThemeColor({}, 'accent');
   const textColor = useThemeColor({}, 'text');
+  const backgroundColor = useThemeColor({}, 'background');
 
   // Request permissions on mount
   useEffect(() => {
@@ -61,173 +60,48 @@ export default function RecordScreen() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startRecording = async () => {
-    if (!hasPermission) {
-      Alert.alert(
-        'Permission Required',
-        'Microphone permission is required to record audio.',
-        [{ text: 'OK', onPress: requestPermissions }]
-      );
-      return;
-    }
+  const record = async () => {
+    setDuration(0);
 
-    try {
-      // Configure audio mode
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      // Create and start recording
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-
-      recordingRef.current = recording;
-      setIsRecording(true);
-      setDuration(0);
-
-      // Start timer
-      intervalRef.current = setInterval(() => {
-        setDuration((prev) => prev + 1);
-      }, 1000);
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      Alert.alert('Error', 'Failed to start recording. Please try again.');
-    }
+    await audioRecorder.prepareToRecordAsync();
+    audioRecorder.record();
+    intervalRef.current = setInterval(() => {
+      setDuration((prev) => prev + 1);
+    }, 1000);
   };
 
   const stopRecording = async () => {
-    if (!recordingRef.current) return;
-
-    try {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-
-      if (!uri) {
-        throw new Error('No recording URI');
-      }
-
-      recordingRef.current = null;
-      setIsRecording(false);
-
-      // Save the recording
-      await saveRecordingToStorage(uri, duration);
-    } catch (error) {
-      console.error('Error stopping recording:', error);
-      Alert.alert('Error', 'Failed to stop recording. Please try again.');
-      setIsRecording(false);
-    }
-  };
-
-  const saveRecordingToStorage = async (uri: string, duration: number) => {
+    // The recording will be available on `audioRecorder.uri`.
     setIsSaving(true);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    await audioRecorder.stop();
+    
     try {
-      // Validate URI exists
-      if (!uri) {
-        throw new Error('No recording file found. Please try recording again.');
-      }
-
-      // Verify file exists before attempting to upload
-      // const fileResponse = await fetch(uri);
-      // const blob = (await fileResponse.blob() as any)._data;
-
-      // Use mp3 format with standard MIME type
-      const filename = `recording-${Date.now()}.mp3`;
-      const mimeType = 'audio/mpeg'; // Standard mp3 MIME type
-      
-      // Create FormData for API request
-      // React Native FormData accepts an object with uri, type, and name
-      // This ensures the file is sent with the correct MIME type (mp3)
-      const formData = new FormData();
-
-      const uriParts = uri.split('.');
-      const fileType = uriParts[uriParts.length - 1];
-      
-      // Append audio file using React Native FormData format (required)
-      formData.append('audioFile', {
-        uri,
-        name: `recording.${fileType}`,
-        type: `audio/x-${fileType}`,
-      } as any);
-      
-      // Append transcriptModel (required) - set to GROQ
-      formData.append('transcriptModel', 'GROQ');
-      
-      // Context is optional, so we skip it for now
-      // If you need to add context later, you can add:
-      // formData.append('context', contextString);
-
-      // Send to backend API
-      try {
-        console.log('nice');
-        console.log(formData.get('audioFile'));
-        
-        const apiResponse = await apiPostFormData('/transcript', formData);
-        console.log('Recording uploaded successfully:', apiResponse);
-      } catch (apiError: any) {
-        // Handle specific API errors
-        if (apiError?.message?.includes('Authentication') || apiError?.message?.includes('token')) {
-          throw new Error('Authentication failed. Please log in again.');
-        } else if (apiError?.message?.includes('Network') || apiError?.message?.includes('fetch')) {
-          throw new Error('Network error. Please check your connection and try again.');
-        } else if (apiError?.message) {
-          throw new Error(`Upload failed: ${apiError.message}`);
-        } else {
-          throw new Error('Failed to upload recording. Please try again.');
-        }
-      }
-      
-      // Save recording locally after successful upload
-      await saveRecording(uri, duration);
-      setDuration(0);
-
-      Alert.alert(
-        'Recording Saved',
-        'Your recording has been saved and is being processed.',
-        [
-          {
-            text: 'View History',
-            onPress: () => router.push('/history'),
-          },
-          {
-            text: 'OK',
-            style: 'cancel',
-          },
-        ]
-      );
-    } catch (error: any) {
-      console.error('Error saving recording:', error);
-      
-      // Provide user-friendly error messages
-      let errorMessage = 'Failed to save recording. Please try again.';
-      
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (error instanceof TypeError && error.message.includes('fetch')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Error', errorMessage);
-    } finally {
+      await sendRecordedFile(audioRecorder.uri as string);
       setIsSaving(false);
+      setShowSuccessModal(true);
+    } catch (error) {
+      setIsSaving(false);
+      Alert.alert('Error', 'Failed to save recording. Please try again.');
     }
   };
 
-  const handleRecordPress = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
+  useEffect(() => {
+    (async () => {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (!status.granted) {
+        Alert.alert('Permission to access microphone was denied');
+      }
+
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+    })();
+  }, []);
 
   if (hasPermission === null) {
     return (
@@ -247,7 +121,7 @@ export default function RecordScreen() {
     );
   }
 
-  if (hasPermission === false) {
+  if (!hasPermission) {
     return (
       <ThemedView style={styles.container}>
         <ResponsiveContainer>
@@ -283,7 +157,7 @@ export default function RecordScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
         >
-          <View style={styles.content}>
+          <View style={{...styles.content}}>
             <View style={styles.header}>
               <ThemedText type="title" style={styles.title}>
                 Record Voice
@@ -300,13 +174,13 @@ export default function RecordScreen() {
                   type="title"
                   style={[
                     styles.timer,
-                    isRecording && styles.timerRecording,
-                    { color: isRecording ? accentColor : textColor },
+                    recorderState.isRecording && styles.timerRecording,
+                    { color: recorderState.isRecording ? accentColor : textColor },
                   ]}
                 >
                   {formatTime(duration)}
                 </ThemedText>
-                {isRecording && (
+                {recorderState.isRecording && (
                   <View style={[styles.recordingIndicator, { backgroundColor: accentColor }]} />
                 )}
               </View>
@@ -315,20 +189,20 @@ export default function RecordScreen() {
               <TouchableOpacity
                 style={[
                   styles.recordButton,
-                  isRecording && styles.recordButtonRecording,
+                  recorderState.isRecording && styles.recordButtonRecording,
                   { borderColor: accentColor },
-                  isRecording && { backgroundColor: accentColor },
+                  recorderState.isRecording && { backgroundColor: accentColor },
                 ]}
-                onPress={handleRecordPress}
+                onPress={recorderState.isRecording ? stopRecording : record}
                 disabled={isSaving}
               >
                 {isSaving ? (
                   <ActivityIndicator size="large" color={textColor} />
                 ) : (
                   <Ionicons
-                    name={isRecording ? 'stop' : 'mic'}
+                    name={recorderState.isRecording ? 'stop' : 'mic'}
                     size={isMobile ? 48 : 64}
-                    color={isRecording ? textColor : accentColor}
+                    color={recorderState.isRecording ? textColor : accentColor}
                   />
                 )}
               </TouchableOpacity>
@@ -337,7 +211,7 @@ export default function RecordScreen() {
               <ThemedText style={styles.statusText}>
                 {isSaving
                   ? 'Saving...'
-                  : isRecording
+                  : recorderState.isRecording
                     ? 'Recording in progress'
                     : 'Ready to record'}
               </ThemedText>
@@ -345,6 +219,34 @@ export default function RecordScreen() {
           </View>
         </ScrollView>
       </ResponsiveContainer>
+
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowSuccessModal(false);
+          router.push('/(tabs)/history');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor }]}>
+            <Ionicons name="checkmark-circle" size={64} color={accentColor} style={styles.successIcon} />
+            <ThemedText type="title" style={styles.successTitle}>
+              Successfully saved record
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: accentColor }]}
+              onPress={() => {
+                setShowSuccessModal(false);
+                router.push('/(tabs)/history');
+              }}
+            >
+              <ThemedText style={styles.modalButtonText}>OK</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -445,5 +347,44 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#000',
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    minWidth: 280,
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  successIcon: {
+    marginBottom: 16,
+  },
+  successTitle: {
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  modalButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 120,
+  },
+  modalButtonText: {
+    color: '#000',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
