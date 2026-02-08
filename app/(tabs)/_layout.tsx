@@ -37,40 +37,26 @@ export default function TabsLayout() {
                 tabBarButton: (props) => <HapticTab {...props} />,
             }}>
             <Tabs.Screen
-                name="index"
-                options={{
-                    title: 'Home',
-                    tabBarIcon: ({focused, color}) => (
-                        <TabIcon
-                            name="home"
-                            focused={focused}
-                            color={color}
-                            accent={text}
-                        />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="record"
-                options={{
-                    title: 'Record',
-                    tabBarIcon: ({focused, color}) => (
-                        <TabIcon
-                            name="mic"
-                            focused={focused}
-                            color={color}
-                            accent={text}
-                        />
-                    ),
-                }}
-            />
-            <Tabs.Screen
                 name="history"
                 options={{
                     title: 'History',
                     tabBarIcon: ({focused, color}) => (
                         <TabIcon
                             name="time"
+                            focused={focused}
+                            color={color}
+                            accent={text}
+                        />
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="index"
+                options={{
+                    title: 'Record',
+                    tabBarIcon: ({focused, color}) => (
+                        <TabIcon
+                            name="mic"
                             focused={focused}
                             color={color}
                             accent={text}
@@ -99,7 +85,6 @@ export default function TabsLayout() {
 type TabIconProps = {
     name:
         | keyof typeof Ionicons.glyphMap
-        | 'home'
         | 'person-outline'
         | 'mic'
         | 'time';

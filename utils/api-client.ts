@@ -1,77 +1,73 @@
+import { API_BASE_URL } from '@/constants/api-url';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {API_BASE_URL} from "@/constants/api-url";
+import axios, { AxiosRequestConfig, Method } from 'axios';
 
 const AUTH_TOKEN_KEY = '@auth_token';
 
-export interface ApiOptions extends RequestInit {
+export interface ApiOptions extends Omit<AxiosRequestConfig, 'url'> {
   requireAuth?: boolean;
+}
+
+function buildUrl(endpoint: string): string {
+  return endpoint.startsWith('http')
+    ? endpoint
+    : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+}
+
+async function getAuthHeaders(requireAuth: boolean): Promise<Record<string, string>> {
+  if (!requireAuth) return {};
+  try {
+    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+      return { Authorization: `Bearer ${token}` };
+    }
+    if (requireAuth) {
+      throw new Error('No authentication token found');
+    }
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    if (requireAuth) {
+      throw new Error('Authentication required');
+    }
+  }
+  return {};
 }
 
 /**
  * Make an authenticated API request
  * Automatically includes the auth token in headers if available
  */
-export async function apiRequest<T = any>(
+async function apiRequest<T = any>(
   endpoint: string,
   options: ApiOptions = {}
 ): Promise<T> {
-  const { requireAuth = true, headers = {}, ...fetchOptions } = options;
+  const { requireAuth = true, headers = {}, ...axiosOptions } = options;
 
-  // Get auth token if required
-  let authHeaders: HeadersInit = {};
-  if (requireAuth) {
-    try {
-      const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-      if (token) {
-        authHeaders = {
-          Authorization: `Bearer ${token}`,
-        };
-      } else if (requireAuth) {
-        throw new Error('No authentication token found');
-      }
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      if (requireAuth) {
-        throw new Error('Authentication required');
-      }
-    }
-  }
+  const authHeaders = await getAuthHeaders(requireAuth);
 
-  // Build full URL
-  const url = endpoint.startsWith('http') 
-    ? endpoint 
-    : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-
-  // Make request
-  const response = await fetch(url, {
-    ...fetchOptions,
+  const config: AxiosRequestConfig = {
+    url: buildUrl(endpoint),
+    method: (options.method as Method) || 'GET',
     headers: {
       'Content-Type': 'application/json',
       ...authHeaders,
       ...headers,
     },
-  });
+    ...axiosOptions,
+  };
 
-  // Handle response
-  const contentType = response.headers.get('content-type');
-  const isJson = contentType?.includes('application/json');
-
-  let data: any;
-  if (isJson) {
-    data = await response.json();
-  } else {
-    data = await response.text();
+  try {
+    const response = await axios.request<T>(config);
+    return response.data;
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data;
+      const message =
+        data?.message ?? data?.error ?? error.message ?? `Request failed with status ${error.response?.status}`;
+      throw new Error(message);
+    }
+    throw error;
   }
-
-  if (!response.ok) {
-    const errorMessage = 
-      data?.message || 
-      data?.error || 
-      `Request failed with status ${response.status}`;
-    throw new Error(errorMessage);
-  }
-
-  return data;
 }
 
 /**
@@ -79,7 +75,7 @@ export async function apiRequest<T = any>(
  */
 export async function apiGet<T = any>(
   endpoint: string,
-  options?: Omit<ApiOptions, 'method' | 'body'>
+  options?: Omit<ApiOptions, 'method' | 'data'>
 ): Promise<T> {
   return apiRequest<T>(endpoint, { ...options, method: 'GET' });
 }
@@ -90,12 +86,12 @@ export async function apiGet<T = any>(
 export async function apiPost<T = any>(
   endpoint: string,
   body?: any,
-  options?: Omit<ApiOptions, 'method' | 'body'>
+  options?: Omit<ApiOptions, 'method' | 'data'>
 ): Promise<T> {
   return apiRequest<T>(endpoint, {
     ...options,
     method: 'POST',
-    body: body ? JSON.stringify(body) : undefined,
+    data: body,
   });
 }
 
@@ -105,12 +101,12 @@ export async function apiPost<T = any>(
 export async function apiPut<T = any>(
   endpoint: string,
   body?: any,
-  options?: Omit<ApiOptions, 'method' | 'body'>
+  options?: Omit<ApiOptions, 'method' | 'data'>
 ): Promise<T> {
   return apiRequest<T>(endpoint, {
     ...options,
     method: 'PUT',
-    body: body ? JSON.stringify(body) : undefined,
+    data: body,
   });
 }
 
@@ -119,96 +115,48 @@ export async function apiPut<T = any>(
  */
 export async function apiDelete<T = any>(
   endpoint: string,
-  options?: Omit<ApiOptions, 'method' | 'body'>
+  options?: Omit<ApiOptions, 'method' | 'data'>
 ): Promise<T> {
   return apiRequest<T>(endpoint, { ...options, method: 'DELETE' });
 }
 
 /**
  * POST request with FormData (for file uploads)
- * Automatically handles Content-Type header for multipart/form-data
+ * Content-Type is left unset so the client sets multipart/form-data with boundary
  */
 export async function apiPostFormData<T = any>(
   endpoint: string,
   formData: FormData,
-  options?: Omit<ApiOptions, 'method' | 'body' | 'headers'>
+  options?: Omit<ApiOptions, 'method' | 'data' | 'headers'>
 ): Promise<T> {
-  const { requireAuth = true, ...fetchOptions } = options || {};
+  const { requireAuth = true, ...axiosOptions } = options || {};
 
-  // Get auth token if required
-  let authHeaders: HeadersInit = {};
-  if (requireAuth) {
-    try {
-      const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-      if (token) {
-        authHeaders = {
-          Authorization: `Bearer ${token}`,
-        };
-      } else if (requireAuth) {
-        throw new Error('No authentication token found');
-      }
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      if (requireAuth) {
-        throw new Error('Authentication required');
-      }
-    }
-  }
+  const authHeaders = await getAuthHeaders(requireAuth);
 
-  // Build full URL
-  const url = endpoint.startsWith('http') 
-    ? endpoint 
-    : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const config: AxiosRequestConfig = {
+    url: buildUrl(endpoint),
+    method: 'POST',
+    data: formData,
+    headers: {
+      ...authHeaders,
+      // Do not set Content-Type – axios sets multipart/form-data with boundary
+    },
+    ...axiosOptions,
+  };
 
-  // Make request - don't set Content-Type, let the browser/React Native set it with boundary
-  let response: Response;
   try {
-    console.log('working', formData);
-    console.log(url)
-    response = await fetch(url, {
-      ...fetchOptions,
-      method: 'POST',
-      body: formData,
-      headers: {
-        ...authHeaders,
-        'Content-Type': 'multipart/form-data',
-        // Don't set Content-Type - let the browser/React Native set it automatically with boundary
-      },
-    });
-  } catch (fetchError: any) {
-    console.log(fetchError);
-    
-    // Handle network errors (connection issues, timeouts, etc.)
-    console.error('Network error during FormData upload:', fetchError);
-    if (fetchError?.message?.includes('Network') || fetchError?.message?.includes('fetch')) {
+    const response = await axios.request<T>(config);
+    return response.data;
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data;
+      const message =
+        data?.message ?? data?.error ?? error.message ?? `Request failed with status ${error.response?.status}`;
+      throw new Error(message);
+    }
+    if (error?.message?.includes('Network') || error?.message?.includes('fetch')) {
       throw new Error('Network error. Please check your connection and try again.');
     }
-    throw new Error(`Failed to connect to server: ${fetchError?.message || 'Unknown error'}`);
+    throw new Error(`Failed to connect to server: ${error?.message || 'Unknown error'}`);
   }
-
-  // Handle response
-  const contentType = response.headers.get('content-type');
-  const isJson = contentType?.includes('application/json');
-
-  let data: any;
-  try {
-    if (isJson) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
-  } catch (parseError) {
-    console.error('Error parsing response:', parseError);
-    throw new Error('Invalid response from server');
-  }
-
-  if (!response.ok) {
-    const errorMessage = 
-      data?.message || 
-      data?.error || 
-      `Request failed with status ${response.status}`;
-    throw new Error(errorMessage);
-  }
-
-  return data;
 }
