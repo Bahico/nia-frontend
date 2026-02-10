@@ -1,8 +1,10 @@
 import { API_BASE_URL } from '@/constants/api-url';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosRequestConfig, Method } from 'axios';
+import { router } from 'expo-router';
 
 const AUTH_TOKEN_KEY = '@auth_token';
+const AUTH_STORAGE_KEY = '@auth_user';
 
 export interface ApiOptions extends Omit<AxiosRequestConfig, 'url'> {
   requireAuth?: boolean;
@@ -14,7 +16,7 @@ function buildUrl(endpoint: string): string {
     : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 }
 
-async function getAuthHeaders(requireAuth: boolean): Promise<Record<string, string>> {
+export async function getAuthHeaders(requireAuth: boolean): Promise<Record<string, string>> {
   if (!requireAuth) return {};
   try {
     const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
@@ -31,6 +33,23 @@ async function getAuthHeaders(requireAuth: boolean): Promise<Record<string, stri
     }
   }
   return {};
+}
+
+async function handleUnauthorized() {
+  try {
+    await Promise.all([
+      AsyncStorage.removeItem(AUTH_STORAGE_KEY),
+      AsyncStorage.removeItem(AUTH_TOKEN_KEY),
+    ]);
+  } catch (error) {
+    console.error('Error clearing auth storage on 401:', error);
+  } finally {
+    try {
+      router.replace('/login');
+    } catch (navError) {
+      console.error('Error navigating to login after 401:', navError);
+    }
+  }
 }
 
 /**
@@ -61,6 +80,10 @@ async function apiRequest<T = any>(
     return response.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        await handleUnauthorized();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       const data = error.response?.data;
       const message =
         data?.message ?? data?.error ?? error.message ?? `Request failed with status ${error.response?.status}`;
@@ -149,6 +172,10 @@ export async function apiPostFormData<T = any>(
     return response.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        await handleUnauthorized();
+        throw new Error('Your session has expired. Please log in again.');
+      }
       const data = error.response?.data;
       const message =
         data?.message ?? data?.error ?? error.message ?? `Request failed with status ${error.response?.status}`;
