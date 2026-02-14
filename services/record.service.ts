@@ -4,10 +4,6 @@ import { getAuthHeaders } from "@/utils/api-client";
 export async function sendRecordedFile(fileUri: string): Promise<void> {
     const authHeaders = await getAuthHeaders(true);
     const formData = new FormData();
-
-    // 2. Create the File Object
-    // We use 'as any' because the standard TypeScript FormData type
-    // expects a Web Blob, but React Native expects this specific object.
         
     // 3. Append to form data
     formData.append('audioFile', {

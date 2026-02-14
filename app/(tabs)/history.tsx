@@ -150,7 +150,8 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   header: {
     paddingTop: 16,

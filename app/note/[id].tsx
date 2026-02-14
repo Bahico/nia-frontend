@@ -81,6 +81,8 @@ export default function NoteDetailScreen() {
       setError(null);
       const data = await getNote(noteId);
       setNote(data);
+      console.log(data);
+      
       
     } catch (err) {
       console.error('Error loading note:', err);
@@ -180,8 +182,8 @@ export default function NoteDetailScreen() {
           {(note.lastViewedAt || note.readingTimeMinutes > 0 || note.wordCount > 0) && (
             <View style={styles.metaRow}>
               <ThemedText style={styles.meta}>
-                {note.lastViewedAt ? formatDate(note.lastViewedAt) : ''}
-                {note.readingTimeMinutes > 0 && ` · ${note.readingTimeMinutes} min read`}
+                {note.lastViewedAt && formatDate(note.lastViewedAt) + ' · '}
+                {note.readingTimeMinutes} min read
                 {note.wordCount > 0 && ` · ${note.wordCount} words`}
               </ThemedText>
             </View>
