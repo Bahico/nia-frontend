@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/constants/api-url";
+import { apiGet } from "@/utils/api-client";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
@@ -85,12 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.message || data.error || 'Login failed');
       }
 
-      // Store user data and token
-      const userData: User = {
-        id: data.user?.id || data.id || Date.now().toString(),
-        email: data.user?.email || data.email || data.username || username.trim(),
-        name: data.user?.name || data.name || data.username || username.trim(),
-      };
 
       const authToken = data.id_token || data.token || data.accessToken || data.access_token;
 
@@ -99,15 +94,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       await Promise.all([
-        AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
+        // AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
         AsyncStorage.setItem(AUTH_TOKEN_KEY, authToken),
       ]);
 
-      // const userDataRes = await apiGet(`${API_BASE_URL}/authenticate`);
-      // const userData: User = userDataRes;
-      // console.log(userData, 'aaaaaa');
+      const userDataRes = await apiGet(`/account`);
+      const userData: User = userDataRes;
+      console.log(userData, 'aaaaaa');
 
-      // AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
+      AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
 
       setUser(userData);
       setToken(authToken);
@@ -163,12 +158,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.message || data.error || 'Registration failed');
       }
 
-      // Store user data and token
-      const userData: User = {
-        id: data.user?.id || data.id || Date.now().toString(),
-        email: data.user?.email || data.email || email.trim(),
-        name: data.user?.name || data.name || name?.trim(),
-      };
 
       const authToken = data.id_token || data.token || data.accessToken || data.access_token;
 
@@ -177,9 +166,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       await Promise.all([
-        AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
         AsyncStorage.setItem(AUTH_TOKEN_KEY, authToken),
       ]);
+
+      const userDataRes = await apiGet(`/account`);
+      const userData: User = userDataRes;
+      console.log(userData, 'aaaaaa');
+
+      AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
 
       setUser(userData);
       setToken(authToken);

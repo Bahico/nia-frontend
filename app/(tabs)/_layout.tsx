@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 
-import { BlurPillTabBar } from '@/components/blur-pill-tab-bar';
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -26,7 +25,7 @@ export default function TabsLayout() {
                     borderTopWidth: 0,
                     elevation: 0,
                     shadowOpacity: 0,
-                    height: 80,
+                    height: 85,
                     justifyContent: 'space-between',
                     paddingBottom: 10,
                     paddingTop: 10,
