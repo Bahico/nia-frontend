@@ -65,6 +65,20 @@ export default function TabsLayout() {
                 }}
             />
             <Tabs.Screen
+                name="statistics"
+                options={{
+                    title: 'Statistics',
+                    tabBarIcon: ({focused, color}) => (
+                        <TabIcon
+                            name="stats-chart"
+                            focused={focused}
+                            color={color}
+                            accent={text}
+                        />
+                    ),
+                }}
+            />
+            <Tabs.Screen
                 name="profile"
                 options={{
                     title: 'Profile',
@@ -87,7 +101,8 @@ type TabIconProps = {
         | keyof typeof Ionicons.glyphMap
         | 'person-outline'
         | 'mic'
-        | 'time';
+        | 'time'
+        | 'stats-chart';
     focused: boolean;
     color: string;
     accent: string;

@@ -103,6 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         AsyncStorage.setItem(AUTH_TOKEN_KEY, authToken),
       ]);
 
+      // const userDataRes = await apiGet(`${API_BASE_URL}/authenticate`);
+      // const userData: User = userDataRes;
+      // console.log(userData, 'aaaaaa');
+
+      // AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
+
       setUser(userData);
       setToken(authToken);
       router.replace('/(tabs)');

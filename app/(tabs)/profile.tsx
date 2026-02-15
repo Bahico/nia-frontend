@@ -1,19 +1,19 @@
-import { ScrollView, StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { ResponsiveContainer } from '@/components/responsive-container';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { ResponsiveContainer } from '@/components/responsive-container';
 import { useAuth } from '@/contexts/auth-context';
-import { useThemeColor } from '@/hooks/use-theme-color';
 import { useResponsiveValue } from '@/hooks/use-responsive';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { useEffect } from 'react';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const accentColor = useThemeColor({}, 'tint');
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  
   const buttonPadding = useResponsiveValue({ mobile: 16, tablet: 18, desktop: 20 });
   const fontSize = useResponsiveValue({ mobile: 16, tablet: 17, desktop: 18 });
 
@@ -40,6 +40,10 @@ export default function ProfileScreen() {
       ]
     );
   };
+
+  useEffect(() => {
+    console.log(user);
+  }, [user]);
 
   return (
     <ThemedView style={styles.container}>
@@ -130,6 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 12,
     gap: 8,
+    marginBottom: 16,
   },
   logoutIcon: {
     marginRight: 4,

@@ -156,7 +156,7 @@ export const GRID_COLUMNS = {
  * Grid gutter (gap) for each breakpoint
  */
 export const GRID_GUTTER = {
-  mobile: 16,
+  mobile: 6,
   tablet: 20,
   desktop: 24,
   largeDesktop: 32,
