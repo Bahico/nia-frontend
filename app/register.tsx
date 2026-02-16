@@ -18,8 +18,10 @@ import { ResponsiveContainer } from '@/components/responsive-container';
 import { useAuth } from '@/contexts/auth-context';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useResponsive, useResponsiveValue } from '@/hooks/use-responsive';
+import { useTranslation } from 'react-i18next';
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -58,7 +60,7 @@ export default function RegisterScreen() {
     try {
       await register(email.trim(), password, name.trim() || undefined);
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message || 'An error occurred during registration');
+      Alert.alert(t('auth.registrationFailed'), error.message || t('auth.registrationError'));
     } finally {
       setIsLoading(false);
     }
@@ -76,10 +78,10 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled">
           <ResponsiveContainer style={styles.content}>
             <ThemedText type="title" style={styles.title}>
-              Create Account
+              {t('auth.createAccount')}
             </ThemedText>
             <ThemedText style={styles.subtitle}>
-              Sign up to get started
+              {t('auth.signUpToStart')}
             </ThemedText>
 
             <ThemedView style={styles.form}>
@@ -92,7 +94,7 @@ export default function RegisterScreen() {
                 />
                 <TextInput
                   style={[styles.input, { padding: inputPadding, fontSize, color: textColor }]}
-                  placeholder="Name (optional)"
+                  placeholder={t('auth.nameOptional')}
                   placeholderTextColor={textColor + '80'}
                   value={name}
                   onChangeText={setName}
@@ -111,7 +113,7 @@ export default function RegisterScreen() {
                 />
                 <TextInput
                   style={[styles.input, { padding: inputPadding, fontSize, color: textColor }]}
-                  placeholder="Email"
+                  placeholder={t('auth.email')}
                   placeholderTextColor={textColor + '80'}
                   value={email}
                   onChangeText={setEmail}
@@ -131,7 +133,7 @@ export default function RegisterScreen() {
                 />
                 <TextInput
                   style={[styles.input, { padding: inputPadding, fontSize, color: textColor }]}
-                  placeholder="Password"
+                  placeholder={t('auth.password')}
                   placeholderTextColor={textColor + '80'}
                   value={password}
                   onChangeText={setPassword}
@@ -161,7 +163,7 @@ export default function RegisterScreen() {
                 />
                 <TextInput
                   style={[styles.input, { padding: inputPadding, fontSize, color: textColor }]}
-                  placeholder="Confirm Password"
+                  placeholder={t('auth.confirmPassword')}
                   placeholderTextColor={textColor + '80'}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -193,7 +195,7 @@ export default function RegisterScreen() {
                     style={[styles.buttonText, { fontSize: fontSize! + 1 }]}
                     lightColor={backgroundColor}
                     darkColor={backgroundColor}>
-                    Sign Up
+                    {t('auth.signUp')}
                   </ThemedText>
                 )}
               </TouchableOpacity>
@@ -203,9 +205,9 @@ export default function RegisterScreen() {
                 style={styles.linkContainer}
                 disabled={isLoading}>
                 <ThemedText style={styles.linkText}>
-                  Already have an account?{' '}
+                  {t('auth.alreadyHaveAccount')}{' '}
                   <ThemedText style={[styles.linkText, { color: accentColor }]}>
-                    Sign In
+                    {t('auth.signIn')}
                   </ThemedText>
                 </ThemedText>
               </TouchableOpacity>

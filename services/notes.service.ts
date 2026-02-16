@@ -2,10 +2,13 @@ import { Note } from '@/models/note.model';
 import { apiGet, apiPut } from '@/utils/api-client';
 
 /**
- * Fetch all notes from backend api/notes
+ * Fetch notes from backend api/notes.
+ * Optional filter: foldersId.equals=folderId to filter by folder.
  */
-export async function getNotes(): Promise<Note[]> {
-  return apiGet<Note[]>('/notes');
+export async function getNotes(params?: { 'foldersId.equals'?: number }): Promise<Note[]> {
+  return apiGet<Note[]>('/notes', {
+    params: params && params['foldersId.equals'] != null ? params : undefined,
+  });
 }
 
 /**

@@ -15,6 +15,7 @@ import { getTemplates } from '@/services/template.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 function formatDate(dateString: string): string {
@@ -43,6 +44,7 @@ function parseNoteFromParams(params: Record<string, string | undefined>): Note |
 }
 
 export default function NoteDetailScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id: string; note?: string }>();
   const { id } = params;
   const router = useRouter();
@@ -72,7 +74,7 @@ export default function NoteDetailScreen() {
     const noteId = id ? parseInt(id, 10) : NaN;
     if (!id || isNaN(noteId)) {
       console.log('true');
-      setError('Invalid note');
+      setError(t('note.invalidNote'));
       setLoading(false);
       return;
     }
@@ -86,12 +88,12 @@ export default function NoteDetailScreen() {
       
     } catch (err) {
       console.error('Error loading note:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load note');
+      setError(err instanceof Error ? err.message : t('note.failedToLoadNote'));
       setNote(null);
     } finally {
       setLoading(false);
     }
-  }, [id, noteFromParams]);
+  }, [id, noteFromParams, t]);
 
 
   useEffect(() => {
@@ -119,7 +121,7 @@ export default function NoteDetailScreen() {
           </View>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" />
-            <ThemedText style={styles.loadingText}>Loading note…</ThemedText>
+            <ThemedText style={styles.loadingText}>{t('note.loadingNote')}</ThemedText>
           </View>
         </ResponsiveContainer>
       </ThemedView>
@@ -138,9 +140,9 @@ export default function NoteDetailScreen() {
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
             <ThemedText type="title" style={styles.errorTitle}>
-              Couldn't load note
+              {t('note.couldNotLoadNote')}
             </ThemedText>
-            <ThemedText style={styles.errorText}>{error ?? 'Note not found'}</ThemedText>
+            <ThemedText style={styles.errorText}>{error ?? t('note.noteNotFound')}</ThemedText>
           </View>
         </ResponsiveContainer>
       </ThemedView>
@@ -160,7 +162,7 @@ export default function NoteDetailScreen() {
               onPress={() => setShowSummaryModal(true)}
             >
               <ThemedText style={[styles.addSummaryButtonText, { color: accentColor }]}>
-                Add summary
+                {t('note.addSummary')}
               </ThemedText>
             </TouchableOpacity>
           )}
@@ -176,15 +178,15 @@ export default function NoteDetailScreen() {
             style={[styles.title, titleSize ? { fontSize: titleSize } : undefined]}
             numberOfLines={isMobile ? 2 : undefined}
           >
-            {note.title || 'No title'}
+            {note.title || t('note.noTitle')}
           </ThemedText>
 
           {(note.lastViewedAt || note.readingTimeMinutes > 0 || note.wordCount > 0) && (
             <View style={styles.metaRow}>
               <ThemedText style={styles.meta}>
                 {note.lastViewedAt && formatDate(note.lastViewedAt) + ' · '}
-                {note.readingTimeMinutes} min read
-                {note.wordCount > 0 && ` · ${note.wordCount} words`}
+                {note.readingTimeMinutes} {t('note.minRead')}
+                {note.wordCount > 0 && ` · ${note.wordCount} ${t('note.words')}`}
               </ThemedText>
             </View>
           )}
@@ -218,6 +220,7 @@ type NoteSummaryModalProps = {
 };
 
 function NoteSummaryModal({ visible, noteId, onClose, onSummaryGenerated }: NoteSummaryModalProps) {
+  const { t } = useTranslation();
   const accentColor = useThemeColor({}, 'accent');
   const backgroundColor = useThemeColor({}, 'background');
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -277,7 +280,7 @@ function NoteSummaryModal({ visible, noteId, onClose, onSummaryGenerated }: Note
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor }]}>
           <ThemedText type="title" style={styles.modalTitle}>
-            Add summary
+            {t('note.addSummary')}
           </ThemedText>
           <ThemedText style={styles.modalDescription}>
             Choose a template to generate a summary for this note. This may take a little while.

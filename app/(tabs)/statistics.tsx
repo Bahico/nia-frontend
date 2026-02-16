@@ -8,6 +8,7 @@ import { UserStatistics } from '@/models/user-statistics';
 import { getUserStatistics } from '@/services/user-statistics.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -19,6 +20,7 @@ import {
 const currentYear = new Date().getFullYear();
 
 export default function StatisticsScreen() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<UserStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,13 +38,13 @@ export default function StatisticsScreen() {
       setStats(data);
     } catch (err) {
       console.error('Error loading statistics:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load statistics');
+      setError(err instanceof Error ? err.message : t('statistics.failedToLoad'));
       setStats(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadStats();
@@ -58,11 +60,11 @@ export default function StatisticsScreen() {
       <ThemedView style={styles.container}>
         <ResponsiveContainer>
           <ThemedText type="title" style={styles.title}>
-            Statistics
+            {t('statistics.title')}
           </ThemedText>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={tint} />
-            <ThemedText style={styles.loadingText}>Loading statistics…</ThemedText>
+            <ThemedText style={styles.loadingText}>{t('statistics.loading')}</ThemedText>
           </View>
         </ResponsiveContainer>
       </ThemedView>
@@ -74,11 +76,11 @@ export default function StatisticsScreen() {
       <ThemedView style={styles.container}>
         <ResponsiveContainer>
           <ThemedText type="title" style={styles.title}>
-            Statistics
+            {t('statistics.title')}
           </ThemedText>
           <View style={styles.loadingContainer}>
             <Ionicons name="alert-circle-outline" size={48} color={tint} />
-            <ThemedText style={styles.errorText}>{error ?? 'No data'}</ThemedText>
+            <ThemedText style={styles.errorText}>{error ?? t('statistics.noData')}</ThemedText>
           </View>
         </ResponsiveContainer>
       </ThemedView>
@@ -86,12 +88,12 @@ export default function StatisticsScreen() {
   }
 
   const statCards = [
-    { label: 'Days', value: stats.days, icon: 'calendar-outline' as const },
-    { label: 'Recordings', value: stats.recordings, icon: 'mic-outline' as const },
-    { label: 'Day streak', value: stats.longestDayStreak, icon: 'flame-outline' as const },
-    { label: 'Hours', value: stats.hours.toFixed(1), icon: 'time-outline' as const },
-    { label: 'Most recordings in a day', value: stats.mostRecordings, icon: 'trending-up-outline' as const },
-    { label: 'Longest recording (H)', value: stats.longestRecordingHours.toFixed(1), icon: 'hourglass-outline' as const },
+    { label: t('statistics.days'), value: stats.days, icon: 'calendar-outline' as const },
+    { label: t('statistics.recordings'), value: stats.recordings, icon: 'mic-outline' as const },
+    { label: t('statistics.dayStreak'), value: stats.longestDayStreak, icon: 'flame-outline' as const },
+    { label: t('statistics.hours'), value: stats.hours.toFixed(1), icon: 'time-outline' as const },
+    { label: t('statistics.mostRecordingsInDay'), value: stats.mostRecordings, icon: 'trending-up-outline' as const },
+    { label: t('statistics.longestRecordingH'), value: stats.longestRecordingHours.toFixed(1), icon: 'hourglass-outline' as const },
   ];
 
   return (
@@ -105,7 +107,7 @@ export default function StatisticsScreen() {
       >
         <ResponsiveContainer>
           <ThemedText type="title" style={styles.title}>
-            Statistics
+            {t('statistics.title')}
           </ThemedText>
 
           <View style={[styles.grid, { gap: gutter }]}>
@@ -142,7 +144,7 @@ export default function StatisticsScreen() {
 
           <View style={styles.heatmapSection}>
             <ThemedText type="subtitle" style={styles.heatmapTitle}>
-              Activity
+              {t('statistics.activity')}
             </ThemedText>
             <HeatmapCalendar
               year={currentYear}

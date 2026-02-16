@@ -2,6 +2,7 @@ import 'react-native-reanimated';
 
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -9,6 +10,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabsLayout() {
+    const { t } = useTranslation();
     const colorScheme = useColorScheme() ?? 'light';
 
     const text = Colors[colorScheme].text;
@@ -38,7 +40,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="history"
                 options={{
-                    title: 'History',
+                    title: t('tabs.history'),
                     tabBarIcon: ({focused, color}) => (
                         <TabIcon
                             name="time"
@@ -52,7 +54,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'Record',
+                    title: t('tabs.record'),
                     tabBarIcon: ({focused, color}) => (
                         <TabIcon
                             name="mic"
@@ -66,7 +68,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="statistics"
                 options={{
-                    title: 'Statistics',
+                    title: t('tabs.statistics'),
                     tabBarIcon: ({focused, color}) => (
                         <TabIcon
                             name="stats-chart"
@@ -80,7 +82,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="profile"
                 options={{
-                    title: 'Profile',
+                    title: t('tabs.profile'),
                     tabBarIcon: ({focused, color}) => (
                         <TabIcon
                             name="person-outline"

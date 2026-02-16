@@ -18,8 +18,10 @@ import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/auth-context';
 import { useResponsive, useResponsiveValue } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +39,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.fillAllFields'));
       return;
     }
 
@@ -45,7 +47,7 @@ export default function LoginScreen() {
     try {
       await login(username.trim(), password);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'An error occurred during login');
+      Alert.alert(t('auth.loginFailed'), error.message || t('auth.loginError'));
     } finally {
       setIsLoading(false);
     }
@@ -63,10 +65,10 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled">
           <ResponsiveContainer style={styles.content}>
             <ThemedText type="title" style={styles.title}>
-              Welcome Back
+              {t('auth.welcomeBack')}
             </ThemedText>
             <ThemedText style={styles.subtitle}>
-              Sign in to continue
+              {t('auth.signInContinue')}
             </ThemedText>
 
             <ThemedView style={styles.form}>
@@ -79,7 +81,7 @@ export default function LoginScreen() {
                 />
                 <TextInput
                   style={[styles.input, { padding: inputPadding, fontSize, color: textColor }]}
-                  placeholder="Username"
+                  placeholder={t('auth.username')}
                   placeholderTextColor={textColor + '80'}
                   value={username}
                   onChangeText={setUsername}
@@ -98,7 +100,7 @@ export default function LoginScreen() {
                 />
                 <TextInput
                   style={[styles.input, { padding: inputPadding, fontSize, color: textColor }]}
-                  placeholder="Password"
+                  placeholder={t('auth.password')}
                   placeholderTextColor={textColor + '80'}
                   value={password}
                   onChangeText={setPassword}
@@ -130,7 +132,7 @@ export default function LoginScreen() {
                     style={[styles.buttonText, { fontSize: fontSize! + 1 }]}
                     lightColor={backgroundColor}
                     darkColor={backgroundColor}>
-                    Sign In
+                    {t('auth.signIn')}
                   </ThemedText>
                 )}
               </TouchableOpacity>
@@ -140,9 +142,9 @@ export default function LoginScreen() {
                 style={styles.linkContainer}
                 disabled={isLoading}>
                 <ThemedText style={styles.linkText}>
-                  Don't have an account?{' '}
+                  {t('auth.dontHaveAccount')}{' '}
                   <ThemedText style={[styles.linkText, { color: accentColor }]}>
-                    Sign Up
+                    {t('auth.signUp')}
                   </ThemedText>
                 </ThemedText>
               </TouchableOpacity>

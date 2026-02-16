@@ -1,17 +1,23 @@
 import 'react-native-reanimated';
 
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ThemedView } from '@/components/themed-view';
+import { initI18n } from '@/i18n';
 import '../global.css';
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const [localeReady, setLocaleReady] = useState(false);
+
+  useEffect(() => {
+    initI18n().then(() => setLocaleReady(true));
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
@@ -37,7 +43,7 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, isLoading, segments]);
 
-  if (isLoading) {
+  if (!localeReady || isLoading) {
     return (
       <ThemedView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#F6E34C" />

@@ -11,9 +11,11 @@ import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { sendRecordedFile } from "@/services/record.service";
+import { useTranslation } from 'react-i18next';
 import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from "expo-audio";
 
 export default function RecordScreen() {
+  const { t } = useTranslation();
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -85,7 +87,7 @@ export default function RecordScreen() {
       setShowSuccessModal(true);
     } catch (error) {
       setIsSaving(false);
-      Alert.alert('Error', 'Failed to save recording. Please try again.');
+      Alert.alert(t('common.error'), t('record.saveRecordingFailed'));
     }
   };
 
@@ -93,7 +95,7 @@ export default function RecordScreen() {
     (async () => {
       const status = await AudioModule.requestRecordingPermissionsAsync();
       if (!status.granted) {
-        Alert.alert('Permission to access microphone was denied');
+        Alert.alert(t('common.error'), t('record.permissionDenied'));
       }
 
       await setAudioModeAsync({
@@ -113,7 +115,7 @@ export default function RecordScreen() {
           >
             <View style={styles.centerContent}>
               <ActivityIndicator size="large" color={accentColor} />
-              <ThemedText style={styles.loadingText}>Requesting permissions...</ThemedText>
+              <ThemedText style={styles.loadingText}>{t('record.requestingPermissions')}</ThemedText>
             </View>
           </ScrollView>
         </ResponsiveContainer>
@@ -132,16 +134,16 @@ export default function RecordScreen() {
             <View style={styles.centerContent}>
               <Ionicons name="mic-off" size={64} color={textColor} style={styles.icon} />
               <ThemedText type="title" style={styles.errorTitle}>
-                Microphone Access Required
+                {t('record.microphoneRequired')}
               </ThemedText>
               <ThemedText style={styles.errorText}>
-                Please enable microphone permissions in your device settings to record audio.
+                {t('record.microphoneEnable')}
               </ThemedText>
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: accentColor }]}
                 onPress={requestPermissions}
               >
-                <ThemedText style={styles.buttonText}>Grant Permission</ThemedText>
+                <ThemedText style={styles.buttonText}>{t('record.grantPermission')}</ThemedText>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -160,10 +162,10 @@ export default function RecordScreen() {
           <View style={{...styles.content}}>
             <View style={styles.header}>
               <ThemedText type="title" style={styles.title}>
-                Record Voice
+                {t('record.recordVoice')}
               </ThemedText>
               <ThemedText style={styles.subtitle}>
-                Tap the button below to start recording
+                {t('record.tapToStart')}
               </ThemedText>
             </View>
 
@@ -210,10 +212,10 @@ export default function RecordScreen() {
               {/* Status Text */}
               <ThemedText style={styles.statusText}>
                 {isSaving
-                  ? 'Saving...'
+                  ? t('record.saving')
                   : recorderState.isRecording
-                    ? 'Recording in progress'
-                    : 'Ready to record'}
+                    ? t('record.recordingInProgress')
+                    : t('record.readyToRecord')}
               </ThemedText>
             </View>
           </View>
@@ -233,7 +235,7 @@ export default function RecordScreen() {
           <View style={[styles.modalContent, { backgroundColor }]}>
             <Ionicons name="checkmark-circle" size={64} color={accentColor} style={styles.successIcon} />
             <ThemedText type="title" style={styles.successTitle}>
-              Successfully saved record
+              {t('record.savedSuccess')}
             </ThemedText>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: accentColor }]}
@@ -242,7 +244,7 @@ export default function RecordScreen() {
                 router.push('/(tabs)/history');
               }}
             >
-              <ThemedText style={styles.modalButtonText}>OK</ThemedText>
+              <ThemedText style={styles.modalButtonText}>{t('common.ok')}</ThemedText>
             </TouchableOpacity>
           </View>
         </View>
