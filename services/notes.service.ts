@@ -1,5 +1,5 @@
 import { Note } from '@/models/note.model';
-import { apiGet, apiPut } from '@/utils/api-client';
+import { apiDelete, apiGet, apiPost, apiPut } from '@/utils/api-client';
 
 /**
  * Fetch notes from backend api/notes.
@@ -19,9 +19,24 @@ export async function getNote(id: number): Promise<Note> {
 }
 
 /**
+ * Delete a note by id from backend api/notes/:id
+ */
+export async function deleteNote(noteId: number): Promise<Note> {
+  return apiDelete<Note>(`/notes/${noteId}`);
+}
+
+/**
  * Update a note by id from backend api/notes/:id
  */
 export async function updateNote(note: Note): Promise<Note> {
   console.log('Updating note:', note);
   return apiPut<Note>(`/notes/${note.id}`, note);
+}
+
+/**
+ * Update a note by id from backend api/notes/:id
+ */
+export async function noteMoveToFolder(noteId: number, folderId: number): Promise<Note> {
+  console.log('Moving note to folder:', noteId, folderId);
+  return apiPost<Note>(`/notes/move-to-folder`, { folderId: folderId, noteId: noteId });
 }

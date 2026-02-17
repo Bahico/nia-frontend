@@ -7,6 +7,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { UserStatistics } from '@/models/user-statistics';
 import { getUserStatistics } from '@/services/user-statistics.service';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,13 +15,15 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
 const currentYear = new Date().getFullYear();
 
-export default function StatisticsScreen() {
+export default function ProfileStatisticsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [stats, setStats] = useState<UserStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,9 +62,14 @@ export default function StatisticsScreen() {
     return (
       <ThemedView style={styles.container}>
         <ResponsiveContainer>
-          <ThemedText type="title" style={styles.title}>
-            {t('statistics.title')}
-          </ThemedText>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={tint} />
+            </TouchableOpacity>
+            <ThemedText type="title" style={styles.title}>
+              {t('statistics.title')}
+            </ThemedText>
+          </View>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={tint} />
             <ThemedText style={styles.loadingText}>{t('statistics.loading')}</ThemedText>
@@ -75,9 +83,14 @@ export default function StatisticsScreen() {
     return (
       <ThemedView style={styles.container}>
         <ResponsiveContainer>
-          <ThemedText type="title" style={styles.title}>
-            {t('statistics.title')}
-          </ThemedText>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={tint} />
+            </TouchableOpacity>
+            <ThemedText type="title" style={styles.title}>
+              {t('statistics.title')}
+            </ThemedText>
+          </View>
           <View style={styles.loadingContainer}>
             <Ionicons name="alert-circle-outline" size={48} color={tint} />
             <ThemedText style={styles.errorText}>{error ?? t('statistics.noData')}</ThemedText>
@@ -106,9 +119,14 @@ export default function StatisticsScreen() {
         }
       >
         <ResponsiveContainer>
-          <ThemedText type="title" style={styles.title}>
-            {t('statistics.title')}
-          </ThemedText>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={tint} />
+            </TouchableOpacity>
+            <ThemedText type="title" style={styles.title}>
+              {t('statistics.title')}
+            </ThemedText>
+          </View>
 
           <View style={[styles.grid, { gap: gutter }]}>
             {statCards.map((card) => (
@@ -125,12 +143,6 @@ export default function StatisticsScreen() {
                     { backgroundColor: cardBg, padding: cardPadding },
                   ]}
                 >
-                  {/* <Ionicons
-                    name={card.icon}
-                    size={24}
-                    color={tint}
-                    style={styles.cardIcon}
-                  /> */}
                   <ThemedText type="subtitle" style={styles.cardLabel}>
                     {card.label}
                   </ThemedText>
@@ -168,15 +180,24 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingBottom: 32,
   },
-  title: {
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 24,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  title: {
+    flex: 1,
     textAlign: 'center',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 32,
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   },
   cardWrapper: {
     marginBottom: 0,
@@ -188,9 +209,6 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
-  },
-  cardIcon: {
-    marginBottom: 8,
   },
   cardLabel: {
     marginBottom: 4,

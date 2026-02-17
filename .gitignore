@@ -43,3 +43,6 @@ app-example
 /android
 bun.lockb
 bun.lock
+
+.idea/
+.vscode/

@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingTop: 16,
+    paddingTop: 32,
   },
   containerInner: {
     flex: 1,

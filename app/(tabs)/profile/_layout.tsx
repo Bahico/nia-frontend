@@ -4,6 +4,7 @@ export default function ProfileLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="statistics" />
       <Stack.Screen name="select-language" />
       <Stack.Screen name="select-country" />
     </Stack>

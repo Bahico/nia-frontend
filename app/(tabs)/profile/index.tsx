@@ -1,10 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import { ResponsiveContainer } from '@/components/responsive-container';
 import { ThemedText } from '@/components/themed-text';
@@ -12,11 +19,14 @@ import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/auth-context';
 import { useResponsiveValue } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { setLocale, SUPPORTED_LOCALES, type Locale } from '@/i18n';
+import { type Locale } from '@/i18n';
+import { changePassword } from '@/services/change-password.service';
 import {
-  type CountryCode,
   getStoredCountry,
+  type CountryCode,
 } from '@/services/country.service';
+
+const NOTIFICATIONS_STORAGE_KEY = '@notifications_enabled';
 
 const LOCALE_LABELS: Record<Locale, string> = {
   en: 'profile.languageEn',
@@ -47,16 +57,30 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const accentColor = useThemeColor({}, 'tint');
   const backgroundColor = useThemeColor({}, 'background');
+  const cardBackground = useThemeColor({}, 'tabBarBackground');
   const buttonPadding = useResponsiveValue({ mobile: 16, tablet: 18, desktop: 20 });
   const fontSize = useResponsiveValue({ mobile: 16, tablet: 17, desktop: 18 });
   const currentLocale = (i18n.language?.split(/-|_/)[0] ?? 'en') as Locale;
   const [selectedCountry, setSelectedCountry] = useState<CountryCode | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       getStoredCountry().then(setSelectedCountry);
+      AsyncStorage.getItem(NOTIFICATIONS_STORAGE_KEY).then((value) => {
+        setNotificationsEnabled(value !== 'false');
+      });
     }, [])
   );
+
+  const handleNotificationsChange = useCallback((value: boolean) => {
+    setNotificationsEnabled(value);
+    AsyncStorage.setItem(NOTIFICATIONS_STORAGE_KEY, String(value));
+  }, []);
+
+  const handleChangePassword = useCallback(() => {
+    void changePassword('', '');
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -79,10 +103,6 @@ export default function ProfileScreen() {
     );
   };
 
-  useEffect(() => {
-    console.log(user);
-  }, [user]);
-
   return (
     <ThemedView style={styles.container}>
       <ScrollView
@@ -90,26 +110,49 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={true}
       >
         <ResponsiveContainer style={styles.content}>
-          <ThemedText type="title" style={styles.title}>
+          {/* <ThemedText type="subtitle" style={styles.title}>
             {t('profile.title')}
-          </ThemedText>
+          </ThemedText> */}
 
-          <ThemedView style={styles.profileCard}>
+          <ThemedView style={[styles.profileCard, { backgroundColor: cardBackground }]}>
             <View style={styles.avatarContainer}>
               <Ionicons name="person" size={48} color={accentColor} />
             </View>
             <ThemedText type="subtitle" style={styles.name}>
-              {user?.name || t('common.user')}
+              {user?.firstName ? `${user?.firstName} ${user?.lastName}` : t('common.user')}
             </ThemedText>
             <ThemedText style={styles.email}>{user?.email}</ThemedText>
           </ThemedView>
 
-          <ThemedView style={styles.infoSection}>
-            <View style={styles.infoRow}>
-              <ThemedText style={styles.infoLabel}>{t('profile.appVersion')}</ThemedText>
-              <ThemedText style={styles.infoValue}>{appVersion}</ThemedText>
-            </View>
-
+          {/* Card 1: General */}
+          <ThemedView style={[styles.infoCard, { backgroundColor: cardBackground }]}>
+            <ThemedText type="subtitle" style={styles.cardTitle}>
+              {t('profile.general')}
+            </ThemedText>
+            <TouchableOpacity
+              style={styles.infoRowTouchable}
+              onPress={() => {}}
+              activeOpacity={0.7}
+            >
+              <ThemedText style={styles.infoLabel}>{t('profile.editProfile')}</ThemedText>
+              <Ionicons name="chevron-forward" size={20} color={accentColor} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.infoRowTouchable}
+              onPress={handleChangePassword}
+              activeOpacity={0.7}
+            >
+              <ThemedText style={styles.infoLabel}>{t('profile.changePassword')}</ThemedText>
+              <Ionicons name="chevron-forward" size={20} color={accentColor} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.infoRowTouchable}
+              onPress={() => router.push('/(tabs)/profile/statistics')}
+              activeOpacity={0.7}
+            >
+              <ThemedText style={styles.infoLabel}>{t('tabs.statistics')}</ThemedText>
+              <Ionicons name="chevron-forward" size={20} color={accentColor} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.infoRowTouchable}
               onPress={() => router.push('/(tabs)/profile/select-language')}
@@ -117,13 +160,10 @@ export default function ProfileScreen() {
             >
               <ThemedText style={styles.infoLabel}>{t('profile.language')}</ThemedText>
               <View style={styles.infoValueRow}>
-                <ThemedText style={styles.infoValue}>
-                  {t(LOCALE_LABELS[currentLocale])}
-                </ThemedText>
+                <ThemedText style={styles.infoValue}>{t(LOCALE_LABELS[currentLocale])}</ThemedText>
                 <Ionicons name="chevron-forward" size={20} color={accentColor} />
               </View>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.infoRowTouchable}
               onPress={() => router.push('/(tabs)/profile/select-country')}
@@ -132,39 +172,54 @@ export default function ProfileScreen() {
               <ThemedText style={styles.infoLabel}>{t('profile.country')}</ThemedText>
               <View style={styles.infoValueRow}>
                 <ThemedText style={styles.infoValue}>
-                  {selectedCountry
-                    ? t(COUNTRY_LABEL_KEYS[selectedCountry])
-                    : '—'}
+                  {selectedCountry ? t(COUNTRY_LABEL_KEYS[selectedCountry]) : '—'}
                 </ThemedText>
                 <Ionicons name="chevron-forward" size={20} color={accentColor} />
               </View>
             </TouchableOpacity>
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>{t('profile.appVersion')}</ThemedText>
+              <ThemedText style={styles.infoValue}>{appVersion}</ThemedText>
+            </View>
           </ThemedView>
 
-          <TouchableOpacity
-            style={[
-              styles.logoutButton,
-              {
-                backgroundColor: accentColor,
-                paddingVertical: buttonPadding,
-              },
-            ]}
-            onPress={handleLogout}
-          >
-            <Ionicons
-              name="log-out-outline"
-              size={20}
-              color={backgroundColor}
-              style={styles.logoutIcon}
-            />
-            <ThemedText
-              style={[styles.logoutButtonText, { fontSize: fontSize! + 1 }]}
-              lightColor={backgroundColor}
-              darkColor={backgroundColor}
-            >
-              {t('profile.logout')}
+          {/* Card 2: Preferences */}
+          <ThemedView style={[styles.infoCard, { backgroundColor: cardBackground }]}>
+            <ThemedText type="subtitle" style={styles.cardTitle}>
+              {t('profile.preferences')}
             </ThemedText>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.infoRowTouchable}
+              onPress={() => {}}
+              activeOpacity={0.7}
+            >
+              <ThemedText style={styles.infoLabel}>{t('profile.faq')}</ThemedText>
+              <Ionicons name="chevron-forward" size={20} color={accentColor} />
+            </TouchableOpacity>
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>{t('profile.notifications')}</ThemedText>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={handleNotificationsChange}
+                trackColor={{ false: '#767577', true: accentColor }}
+                thumbColor="#fff"
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.infoRowTouchable}
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <View style={styles.infoValueRow}>
+                <Ionicons name="log-out-outline" size={20} color="#E34C4C" />
+                <ThemedText style={[styles.infoLabel, styles.logoutText]}>
+                  {t('profile.logout')}
+                </ThemedText>
+              </View>
+              
+              <Ionicons name="chevron-forward" size={20} color={accentColor} />
+            </TouchableOpacity>
+          </ThemedView>
         </ResponsiveContainer>
       </ScrollView>
     </ThemedView>
@@ -174,6 +229,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 32,
   },
   scrollContent: {
     flexGrow: 1,
@@ -184,7 +240,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   title: {
-    marginBottom: 32,
+    marginBottom: 16,
     textAlign: 'center',
   },
   profileCard: {
@@ -192,7 +248,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     padding: 24,
     borderRadius: 16,
-    backgroundColor: '#2c2f38',
+    // backgroundColor: '#2c2f38',
   },
   avatarContainer: {
     width: 96,
@@ -211,10 +267,15 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     textAlign: 'center',
   },
-  infoSection: {
+  infoCard: {
     marginBottom: 24,
     borderRadius: 12,
     overflow: 'hidden',
+    padding: 16,
+  },
+  cardTitle: {
+    marginBottom: 12,
+    paddingHorizontal: 0,
   },
   infoRow: {
     flexDirection: 'row',
@@ -243,18 +304,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    gap: 8,
-    marginBottom: 16,
-  },
-  logoutIcon: {
-    marginRight: 4,
-  },
-  logoutButtonText: {
+  logoutText: {
+    color: '#E34C4C',
     fontWeight: '600',
   },
 });

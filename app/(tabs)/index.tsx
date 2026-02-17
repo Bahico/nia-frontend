@@ -11,8 +11,8 @@ import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { sendRecordedFile } from "@/services/record.service";
-import { useTranslation } from 'react-i18next';
 import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from "expo-audio";
+import { useTranslation } from 'react-i18next';
 
 export default function RecordScreen() {
   const { t } = useTranslation();
@@ -256,6 +256,7 @@ export default function RecordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 100,
   },
   scrollContent: {
     flexGrow: 1,

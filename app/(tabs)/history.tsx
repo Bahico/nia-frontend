@@ -1,4 +1,4 @@
-import { NoteItem } from '@/components/note-item';
+import { NoteItem, type NoteMoreAction } from '@/components/note-item';
 import { ResponsiveContainer } from '@/components/responsive-container';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -7,7 +7,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { Folder } from '@/models/folder.model';
 import { Note } from '@/models/note.model';
 import { createFolder, deleteFolder, getFolders, updateFolder } from '@/services/folder.service';
-import { getNotes } from '@/services/notes.service';
+import { getNotes, noteMoveToFolder, updateNote } from '@/services/notes.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -74,6 +74,10 @@ export default function HistoryScreen() {
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [folderMenuFolderId, setFolderMenuFolderId] = useState<number | null>(null);
+  const [noteMenuNoteId, setNoteMenuNoteId] = useState<number | null>(null);
+  const [noteMoveToFolderNote, setNoteMoveToFolderNote] = useState<Note | null>(null);
+  const [noteRenameNote, setNoteRenameNote] = useState<Note | null>(null);
+  const [renameInput, setRenameInput] = useState('');
 
   const router = useRouter();
   const { isTablet, isDesktop } = useResponsive();
@@ -248,8 +252,85 @@ export default function HistoryScreen() {
     });
   };
 
+  const handleNoteMorePress = useCallback((noteId: number) => {
+    setNoteMenuNoteId((id) => (id === noteId ? null : noteId));
+  }, []);
+
+  const handleNoteMoreAction = useCallback(
+    async (note: Note, action: NoteMoreAction) => {
+      setNoteMenuNoteId(null);
+      try {
+        if (action === 're-transcribe') {
+          Alert.alert(t('common.ok'), t('history.reTranscribeComingSoon'));
+          return;
+        }
+        if (action === 'move-to-folder') {
+          setNoteMoveToFolderNote(note);
+          return;
+        }
+        if (action === 'rename') {
+          setNoteRenameNote(note);
+          setRenameInput(note.title || '');
+          return;
+        }
+        if (action === 'move-to-trash') {
+          await updateNote({ ...note, isArchived: true });
+          await loadNotes();
+        }
+      } catch (err) {
+        console.error('Note action failed:', err);
+        Alert.alert(
+          t('common.error'),
+          err instanceof Error ? err.message : t('history.failedToLoadNotes')
+        );
+      }
+    },
+    [loadNotes, t]
+  );
+
+  const handleMoveToFolderSelect = useCallback(
+    async (folderId: number) => {
+      if (!noteMoveToFolderNote) return;
+      try {
+        await noteMoveToFolder(noteMoveToFolderNote.id, folderId);
+        setNoteMoveToFolderNote(null);
+        await loadNotes();
+      } catch (err) {
+        console.error('Move to folder failed:', err);
+        Alert.alert(
+          t('common.error'),
+          err instanceof Error ? err.message : t('history.failedToLoadNotes')
+        );
+      }
+    },
+    [noteMoveToFolderNote, loadNotes, t]
+  );
+
+  const handleRenameSubmit = useCallback(async () => {
+    if (!noteRenameNote) return;
+    const newTitle = renameInput.trim() || noteRenameNote.title;
+    try {
+      await updateNote({ ...noteRenameNote, title: newTitle });
+      setNoteRenameNote(null);
+      setRenameInput('');
+      await loadNotes();
+    } catch (err) {
+      console.error('Rename failed:', err);
+      Alert.alert(
+        t('common.error'),
+        err instanceof Error ? err.message : t('history.failedToLoadNotes')
+      );
+    }
+  }, [noteRenameNote, renameInput, loadNotes, t]);
+
   const renderItem = ({ item }: { item: Note }) => (
-    <NoteItem note={item} onPress={handleNotePress} />
+    <NoteItem
+      note={item}
+      onPress={handleNotePress}
+      onMoreAction={handleNoteMoreAction}
+      moreMenuOpen={noteMenuNoteId === item.id}
+      onMorePress={() => handleNoteMorePress(item.id)}
+    />
   );
 
   const renderEmpty = () => (
@@ -292,12 +373,6 @@ export default function HistoryScreen() {
                 <ThemedText style={styles.folderName}>{folderDisplayName}</ThemedText>
                 <Ionicons name="chevron-down" size={20} color={accentColor} />
               </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.plusButton, pressed && styles.folderRowPressed]}
-                onPress={openNewFolderForm}
-              >
-                <Ionicons name="add-circle-outline" size={28} color={accentColor} />
-              </Pressable>
             </View>
           </View>
           <View style={styles.loadingContainer}>
@@ -313,9 +388,9 @@ export default function HistoryScreen() {
     <ThemedView style={styles.container}>
       <ResponsiveContainer>
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
+          {/* <ThemedText type="title" style={styles.title}>
             {t('history.title')}
-          </ThemedText>
+          </ThemedText> */}
           
           <View style={styles.headerRow}>
             <Pressable
@@ -323,13 +398,7 @@ export default function HistoryScreen() {
               onPress={() => setFolderSheetVisible(true)}
             >
               <ThemedText style={styles.folderName}>{folderDisplayName}</ThemedText>
-              <Ionicons name="chevron-down" size={20} color={accentColor} />
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.plusButton, pressed && styles.folderRowPressed]}
-              onPress={openNewFolderForm}
-            >
-              <Ionicons name="add-circle-outline" size={28} color={accentColor} />
+              <Ionicons name="chevron-down" size={28} color={accentColor} />
             </Pressable>
           </View>
         </View>
@@ -350,6 +419,7 @@ export default function HistoryScreen() {
           columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
           key={numColumns}
           showsVerticalScrollIndicator={true}
+          onScrollBeginDrag={() => setNoteMenuNoteId(null)}
         />
 
         <Modal
@@ -401,7 +471,19 @@ export default function HistoryScreen() {
                   <Ionicons name="trash-outline" size={22} color="#fff" />
                   <ThemedText style={styles.sheetItemText}>{t('history.trash')}</ThemedText>
                 </Pressable>
-                <View style={styles.sheetDivider} />
+                <View style={styles.sheetMyFoldersHeader}>
+                  <ThemedText style={styles.sheetMyFoldersTitle}>{t('history.myFolders')}</ThemedText>
+                  <Pressable
+                    style={({ pressed }) => [styles.sheetAddFolderButton, pressed && styles.folderRowPressed]}
+                    onPress={() => {
+                      setFolderSheetVisible(false);
+                      openNewFolderForm();
+                    }}
+                  >
+                    <Ionicons name="add-circle-outline" size={24} color={accentColor} />
+                    {/* <ThemedText style={styles.sheetAddFolderText}>{t('history.addFolder')}</ThemedText> */}
+                  </Pressable>
+                </View>
                 {folders.map((folder) => (
                   <View key={folder.id} style={styles.folderItemWrapper}>
                     <View style={styles.folderItemRow}>
@@ -590,6 +672,96 @@ export default function HistoryScreen() {
             </Pressable>
           </Pressable>
         </Modal>
+
+        <Modal
+          visible={noteMoveToFolderNote != null}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setNoteMoveToFolderNote(null)}
+        >
+          <Pressable style={[styles.sheetOverlay]} onPress={() => setNoteMoveToFolderNote(null)}>
+            <Pressable
+              style={[styles.sheetContent, { backgroundColor: sheetBackground }]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.sheetHandle} />
+              <ThemedText type="title" style={styles.formTitle}>
+                {t('history.moveToFolderTitle')}
+              </ThemedText>
+              <ScrollView
+                style={styles.sheetScroll}
+                contentContainerStyle={styles.sheetScrollContent}
+                showsVerticalScrollIndicator={true}
+              >
+                {folders.map((folder) => (
+                  <Pressable
+                    key={folder.id}
+                    style={styles.sheetItem}
+                    onPress={() => handleMoveToFolderSelect(folder.id)}
+                  >
+                    <Ionicons
+                      name={(folder.icon as keyof typeof Ionicons.glyphMap) || 'folder-outline'}
+                      size={22}
+                      color="#fff"
+                    />
+                    <ThemedText style={styles.sheetItemText}>{folder.name}</ThemedText>
+                  </Pressable>
+                ))}
+                {folders.length === 0 && (
+                  <ThemedText style={styles.emptyText}>{t('history.myFolders')}</ThemedText>
+                )}
+              </ScrollView>
+              <Pressable
+                style={[styles.formButton, styles.formCancelButton, { marginHorizontal: 16, marginBottom: 16 }]}
+                onPress={() => setNoteMoveToFolderNote(null)}
+              >
+                <ThemedText style={styles.formCancelText}>{t('common.cancel')}</ThemedText>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        <Modal
+          visible={noteRenameNote != null}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setNoteRenameNote(null)}
+        >
+          <Pressable style={[styles.sheetOverlay]} onPress={() => setNoteRenameNote(null)}>
+            <Pressable
+              style={[styles.formSheetContent, { backgroundColor: sheetBackground }]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.sheetHandle} />
+              <ThemedText type="title" style={styles.formTitle}>
+                {t('history.renameNote')}
+              </ThemedText>
+              <ThemedText style={styles.formLabel}>{t('history.noteTitle')}</ThemedText>
+              <TextInput
+                style={[styles.formInput, { color: '#fff' }]}
+                placeholder={t('history.noteTitle')}
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                value={renameInput}
+                onChangeText={setRenameInput}
+                autoFocus
+              />
+              <View style={styles.formActions}>
+                <Pressable
+                  style={[styles.formButton, styles.formCancelButton]}
+                  onPress={() => setNoteRenameNote(null)}
+                >
+                  <ThemedText style={styles.formCancelText}>{t('common.cancel')}</ThemedText>
+                </Pressable>
+                <Pressable
+                  style={[styles.formButton, { backgroundColor: accentColor }]}
+                  onPress={handleRenameSubmit}
+                >
+                  <ThemedText style={styles.formSaveText}>{t('common.save')}</ThemedText>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </ResponsiveContainer>
     </ThemedView>
   );
@@ -598,7 +770,7 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
+    paddingTop: 32,
     paddingBottom: 32,
   },
   header: {
@@ -671,7 +843,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   folderName: {
-    fontSize: 15,
+    fontSize: 32,
   },
   sheetOverlay: {
     flex: 1,
@@ -711,11 +883,27 @@ const styles = StyleSheet.create({
   sheetItemSelected: {
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  sheetDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    marginVertical: 8,
-    marginHorizontal: 12,
+  sheetMyFoldersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 6,
+    paddingTop: 14,
+    paddingHorizontal: 12,
+  },
+  sheetMyFoldersTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  sheetAddFolderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  sheetAddFolderText: {
+    fontSize: 15,
   },
   folderItemWrapper: {
     position: 'relative',

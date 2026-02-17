@@ -54,6 +54,12 @@
   },
   "profile": {
     "title": "Профиль",
+    "general": "Общие",
+    "editProfile": "Редактировать профиль",
+    "changePassword": "Изменить пароль",
+    "faq": "Частые вопросы",
+    "preferences": "Настройки",
+    "notifications": "Уведомления",
     "logout": "Выйти",
     "logoutConfirmTitle": "Выход",
     "logoutConfirmMessage": "Вы уверены, что хотите выйти?",
@@ -97,7 +103,17 @@
     "color": "Цвет",
     "icon": "Иконка",
     "nameRequired": "Введите название",
-    "failedToSaveFolder": "Не удалось сохранить папку"
+    "failedToSaveFolder": "Не удалось сохранить папку",
+    "myFolders": "Мои папки",
+    "addFolder": "Добавить папку",
+    "reTranscribe": "Перетранскрибировать",
+    "moveToFolder": "Переместить в папку",
+    "rename": "Переименовать",
+    "moveToTrash": "В корзину",
+    "renameNote": "Переименовать заметку",
+    "noteTitle": "Название заметки",
+    "moveToFolderTitle": "Переместить в папку",
+    "reTranscribeComingSoon": "Перетранскрипция будет доступна позже."
   },
   "statistics": {
     "title": "Статистика",

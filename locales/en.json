@@ -54,6 +54,12 @@
   },
   "profile": {
     "title": "Profile",
+    "general": "General",
+    "editProfile": "Edit profile",
+    "changePassword": "Change password",
+    "faq": "FAQ",
+    "preferences": "Preferences",
+    "notifications": "Notifications",
     "logout": "Logout",
     "logoutConfirmTitle": "Logout",
     "logoutConfirmMessage": "Are you sure you want to logout?",
@@ -97,7 +103,17 @@
     "color": "Color",
     "icon": "Icon",
     "nameRequired": "Name is required",
-    "failedToSaveFolder": "Failed to save folder"
+    "failedToSaveFolder": "Failed to save folder",
+    "myFolders": "My folders",
+    "addFolder": "Add folder",
+    "reTranscribe": "Re-transcribe",
+    "moveToFolder": "Move to folder",
+    "rename": "Rename",
+    "moveToTrash": "Move to trash",
+    "renameNote": "Rename note",
+    "noteTitle": "Note title",
+    "moveToFolderTitle": "Move to folder",
+    "reTranscribeComingSoon": "Re-transcribe will be available soon."
   },
   "statistics": {
     "title": "Statistics",

@@ -54,6 +54,12 @@
   },
   "profile": {
     "title": "Profil",
+    "general": "Umumiy",
+    "editProfile": "Profilni tahrirlash",
+    "changePassword": "Parolni oʻzgartirish",
+    "faq": "Savol-javob",
+    "preferences": "Sozlamalar",
+    "notifications": "Bildirishnomalar",
     "logout": "Chiqish",
     "logoutConfirmTitle": "Chiqish",
     "logoutConfirmMessage": "Chiqishni xohlaysizmi?",
@@ -97,7 +103,17 @@
     "color": "Rang",
     "icon": "Belgi",
     "nameRequired": "Nom kiritilishi shart",
-    "failedToSaveFolder": "Papkani saqlab boʻlmadi"
+    "failedToSaveFolder": "Papkani saqlab boʻlmadi",
+    "myFolders": "Mening papkalarim",
+    "addFolder": "Papka qoʻshish",
+    "reTranscribe": "Qayta transkripsiya",
+    "moveToFolder": "Papkaga koʻchirish",
+    "rename": "Nomini oʻzgartirish",
+    "moveToTrash": "Chiqitdonga",
+    "renameNote": "Eslatmani qayta nomlash",
+    "noteTitle": "Eslatma sarlavhasi",
+    "moveToFolderTitle": "Papkaga koʻchirish",
+    "reTranscribeComingSoon": "Qayta transkripsiya tez orada mavjud boʻladi."
   },
   "statistics": {
     "title": "Statistika",
