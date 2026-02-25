@@ -1,17 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-
 
 import { ResponsiveContainer } from '@/components/responsive-container';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { sendRecordedFile } from "@/services/record.service";
-import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from "expo-audio";
+import { sendRecordedFile } from '@/services/record.service';
+import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import { useTranslation } from 'react-i18next';
 
 export default function RecordScreen() {
@@ -73,7 +73,6 @@ export default function RecordScreen() {
   };
 
   const stopRecording = async () => {
-    // The recording will be available on `audioRecorder.uri`.
     setIsSaving(true);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -82,12 +81,31 @@ export default function RecordScreen() {
     await audioRecorder.stop();
 
     try {
-      await sendRecordedFile(audioRecorder.uri as string);
+      await sendRecordedFile(audioRecorder.uri as string, duration);
       setIsSaving(false);
       setShowSuccessModal(true);
     } catch (error) {
       setIsSaving(false);
       Alert.alert(t('common.error'), t('record.saveRecordingFailed'));
+    }
+  };
+
+  const importAudio = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const { uri, name, mimeType } = result.assets[0];
+      setIsSaving(true);
+      await sendRecordedFile({ uri, name, type: mimeType ?? 'audio/mpeg' }, duration);
+      setIsSaving(false);
+      setShowSuccessModal(true);
+    } catch (error) {
+      setIsSaving(false);
+      Alert.alert(t('common.error'), t('record.importFailed'));
     }
   };
 
@@ -217,6 +235,24 @@ export default function RecordScreen() {
                     ? t('record.recordingInProgress')
                     : t('record.readyToRecord')}
               </ThemedText>
+
+              {/* Import Audio */}
+              <View style={styles.importSection}>
+                <View style={[styles.dividerLine, { backgroundColor: textColor }]} />
+                <ThemedText style={[styles.dividerText, { color: textColor }]}>— {t('common.or')} —</ThemedText>
+                <View style={[styles.dividerLine, { backgroundColor: textColor }]} />
+              </View>
+              <ThemedText style={styles.importDescription}>{t('record.importAudioDescription')}</ThemedText>
+              <TouchableOpacity
+                style={[styles.importButton, { borderColor: accentColor }]}
+                onPress={importAudio}
+                disabled={isSaving || recorderState.isRecording}
+              >
+                <Ionicons name="document-attach-outline" size={isMobile ? 24 : 28} color={accentColor} />
+                <ThemedText style={[styles.importButtonText, { color: accentColor }]}>
+                  {t('record.importAudio')}
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -323,6 +359,44 @@ const styles = StyleSheet.create({
   statusText: {
     textAlign: 'center',
     opacity: 0.7,
+  },
+  importSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+    maxWidth: 280,
+    marginTop: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    opacity: 0.3,
+  },
+  dividerText: {
+    opacity: 0.6,
+    fontSize: 14,
+  },
+  importDescription: {
+    textAlign: 'center',
+    opacity: 0.7,
+    fontSize: 14,
+    paddingHorizontal: 24,
+  },
+  importButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    marginTop: 12,
+  },
+  importButtonText: {
+    fontWeight: '600',
+    fontSize: 16,
   },
   loadingText: {
     marginTop: 16,

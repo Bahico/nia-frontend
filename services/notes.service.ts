@@ -1,12 +1,12 @@
 import { Note } from '@/models/note.model';
-import { apiDelete, apiGet, apiPost, apiPut } from '@/utils/api-client';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/utils/api-client';
 
 /**
- * Fetch notes from backend api/notes.
+ * Fetch notes from backend api/notes/for-mobile.
  * Optional filter: foldersId.equals=folderId to filter by folder.
  */
 export async function getNotes(params?: { 'foldersId.equals'?: number }): Promise<Note[]> {
-  return apiGet<Note[]>('/notes', {
+  return apiGet<Note[]>('/notes/for-mobile', {
     params: params && params['foldersId.equals'] != null ? params : undefined,
   });
 }
@@ -30,7 +30,7 @@ export async function deleteNote(noteId: number): Promise<Note> {
  */
 export async function updateNote(note: Note): Promise<Note> {
   console.log('Updating note:', note);
-  return apiPut<Note>(`/notes/${note.id}`, note);
+  return apiPatch<Note>(`/notes/${note.id}`, note);
 }
 
 /**

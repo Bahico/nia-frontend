@@ -25,6 +25,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { isMobile } = useResponsive();
@@ -45,7 +46,7 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
-      await login(username.trim(), password);
+      await login(username.trim(), password, rememberMe);
     } catch (error: any) {
       Alert.alert(t('auth.loginFailed'), error.message || t('auth.loginError'));
     } finally {
@@ -120,6 +121,22 @@ export default function LoginScreen() {
                   />
                 </TouchableOpacity>
               </ThemedView>
+              
+              <ThemedView style={styles.rememberMeContainer}>
+                <TouchableOpacity
+                  style={styles.rememberMeButton}
+                  onPress={() => !isLoading && setRememberMe(!rememberMe)}
+                  disabled={isLoading}>
+                  <Ionicons
+                    name={rememberMe ? 'checkbox-outline' : 'square-outline'}
+                    size={18}
+                    color={accentColor}
+                  />
+                  <ThemedText style={styles.rememberMeText}>
+                    {t('auth.rememberMe')}
+                  </ThemedText>
+                </TouchableOpacity>
+              </ThemedView>
 
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: accentColor, paddingVertical: buttonPadding }]}
@@ -183,6 +200,19 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+  },
+  rememberMeContainer: {
+    width: '100%',
+    marginBottom: 8,
+  },
+  rememberMeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rememberMeText: {
+    marginLeft: 8,
+    fontSize: 14,
+    opacity: 0.8,
   },
   inputContainer: {
     flexDirection: 'row',

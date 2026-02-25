@@ -18,7 +18,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, rememberMe: boolean = true) => {
     try {
       // Basic validation
       if (!username || !password) {
@@ -71,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           username: username.trim(),
           password,
+          rememberMe,
         }),
       });
 
@@ -94,16 +95,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('No authentication token received from server');
       }
 
-      await Promise.all([
-        // AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
-        AsyncStorage.setItem(AUTH_TOKEN_KEY, authToken),
-      ]);
+      if (rememberMe) {
+        await AsyncStorage.setItem(AUTH_TOKEN_KEY, authToken);
+      }
 
       const userDataRes = await apiGet(`/account`);
       const userData: User = userDataRes;
-      console.log(userData, 'aaaaaa');
 
-      AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
+      if (rememberMe) {
+        AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+      }
 
       setUser(userData);
       setToken(authToken);
@@ -172,7 +173,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const userDataRes = await apiGet(`/account`);
       const userData: User = userDataRes;
-      console.log(userData, 'aaaaaa');
 
       AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData)),
 

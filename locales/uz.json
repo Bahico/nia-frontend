@@ -1,6 +1,7 @@
 {
   "common": {
     "ok": "OK",
+    "or": "yoki",
     "cancel": "Bekor qilish",
     "save": "Saqlash",
     "delete": "Oʻchirish",
@@ -20,6 +21,7 @@
     "signInContinue": "Davom etish uchun tizimga kiring",
     "username": "Foydalanuvchi nomi",
     "password": "Parol",
+    "rememberMe": "Meni eslab qol",
     "signIn": "Kirish",
     "signUp": "Roʻyxatdan oʻtish",
     "dontHaveAccount": "Hisobingiz yoʻqmi?",
@@ -50,7 +52,10 @@
     "readyToRecord": "Yozishga tayyor",
     "saveRecordingFailed": "Yozuvni saqlab boʻlmadi. Qayta urinib koʻring.",
     "savedSuccess": "Yozuv muvaffaqiyatli saqlandi",
-    "permissionDenied": "Mikrofonga kirish rad etildi"
+    "permissionDenied": "Mikrofonga kirish rad etildi",
+    "importAudio": "Audioni import qilish",
+    "importAudioDescription": "Yuklash uchun qurilmangizdan audio fayl tanlang",
+    "importFailed": "Audioni import qilib boʻlmadi. Qayta urinib koʻring."
   },
   "profile": {
     "title": "Profil",

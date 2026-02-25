@@ -7,7 +7,8 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { Folder } from '@/models/folder.model';
 import { Note } from '@/models/note.model';
 import { createFolder, deleteFolder, getFolders, updateFolder } from '@/services/folder.service';
-import { getNotes, noteMoveToFolder, updateNote } from '@/services/notes.service';
+import { getFiles } from '@/services/files.service';
+import { noteMoveToFolder, updateNote } from '@/services/notes.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -110,14 +111,54 @@ export default function HistoryScreen() {
   const loadNotes = useCallback(async () => {
     try {
       setError(null);
+
+      // Load files with their notes and folders
+      const files = await getFiles();
+
+      const hasNotes = (notes: Note[] | undefined | null): notes is Note[] =>
+        Array.isArray(notes) && notes.length > 0;
+
+      // Only consider files that actually have notes
+      let filesWithNotes = files.filter((file) => hasNotes(file.notes));
+
+      // Apply folder filter on files (by file.folders) if a concrete folder is selected
       const folderId =
         typeof selectedFolderId === 'number' ? selectedFolderId : undefined;
-      const data = await getNotes(
-        folderId != null ? { 'foldersId.equals': folderId } : undefined
-      );
-      setNotes(Array.isArray(data) ? data : []);
+
+      if (folderId != null) {
+        filesWithNotes = filesWithNotes.filter((file) =>
+          Array.isArray(file.folders) &&
+          file.folders.some((folder) => folder.id === folderId)
+        );
+      }
+
+      // For each file, pick the last relevant note:
+      // - In trash view -> last archived note
+      // - In normal view -> last non-archived note
+      const latestNotes: Note[] = filesWithNotes
+        .map((file) => {
+          const candidateNotes =
+            selectedFolderId === TRASH_ID
+              ? file.notes.filter((note) => note.isArchived)
+              : file.notes.filter((note) => !note.isArchived);
+
+          if (candidateNotes.length === 0) {
+            return null;
+          }
+
+          const sorted = [...candidateNotes].sort((a, b) => {
+            const aTime = new Date(a.lastViewedAt).getTime();
+            const bTime = new Date(b.lastViewedAt).getTime();
+            return aTime - bTime;
+          });
+
+          return sorted[sorted.length - 1];
+        })
+        .filter((note): note is Note => note != null);
+
+      setNotes(latestNotes);
     } catch (err) {
-      console.error('Error loading notes:', err);
+      console.error('Error loading notes (from files):', err);
       setError(err instanceof Error ? err.message : t('history.failedToLoadNotes'));
       setNotes([]);
     } finally {

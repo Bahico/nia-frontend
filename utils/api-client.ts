@@ -134,6 +134,21 @@ export async function apiPut<T = any>(
 }
 
 /**
+ * PATCH request helper
+ */
+export async function apiPatch<T = any>(
+  endpoint: string,
+  body?: any,
+  options?: Omit<ApiOptions, 'method' | 'data'>
+): Promise<T> {
+  return apiRequest<T>(endpoint, {
+    ...options,
+    method: 'PATCH',
+    data: body,
+  });
+}
+
+/**
  * DELETE request helper
  */
 export async function apiDelete<T = any>(

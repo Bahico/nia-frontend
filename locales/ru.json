@@ -1,6 +1,7 @@
 {
   "common": {
     "ok": "OK",
+    "or": "или",
     "cancel": "Отмена",
     "save": "Сохранить",
     "delete": "Удалить",
@@ -20,6 +21,7 @@
     "signInContinue": "Войдите, чтобы продолжить",
     "username": "Имя пользователя",
     "password": "Пароль",
+    "rememberMe": "Запомнить меня",
     "signIn": "Войти",
     "signUp": "Регистрация",
     "dontHaveAccount": "Нет аккаунта?",
@@ -50,7 +52,10 @@
     "readyToRecord": "Готов к записи",
     "saveRecordingFailed": "Не удалось сохранить запись. Попробуйте снова.",
     "savedSuccess": "Запись успешно сохранена",
-    "permissionDenied": "Доступ к микрофону запрещён"
+    "permissionDenied": "Доступ к микрофону запрещён",
+    "importAudio": "Импорт аудио",
+    "importAudioDescription": "Выберите аудиофайл с устройства для загрузки",
+    "importFailed": "Не удалось импортировать аудио. Попробуйте снова."
   },
   "profile": {
     "title": "Профиль",

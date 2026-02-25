@@ -1,6 +1,7 @@
 {
   "common": {
     "ok": "OK",
+    "or": "or",
     "cancel": "Cancel",
     "save": "Save",
     "delete": "Delete",
@@ -20,6 +21,7 @@
     "signInContinue": "Sign in to continue",
     "username": "Username",
     "password": "Password",
+    "rememberMe": "Remember me",
     "signIn": "Sign In",
     "signUp": "Sign Up",
     "dontHaveAccount": "Don't have an account?",
@@ -50,7 +52,10 @@
     "readyToRecord": "Ready to record",
     "saveRecordingFailed": "Failed to save recording. Please try again.",
     "savedSuccess": "Successfully saved record",
-    "permissionDenied": "Permission to access microphone was denied"
+    "permissionDenied": "Permission to access microphone was denied",
+    "importAudio": "Import Audio",
+    "importAudioDescription": "Pick an audio file from your device to upload",
+    "importFailed": "Failed to import audio. Please try again."
   },
   "profile": {
     "title": "Profile",
