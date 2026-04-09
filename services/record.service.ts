@@ -48,7 +48,7 @@ export async function sendRecordedFile(fileUriOrOptions: string | SendRecordedFi
     if (!response) {
         throw new Error('Failed to upload file to GCS');
     }
-    
+
     try {
         await createFile({
             fileName: storageFileName,
@@ -56,7 +56,9 @@ export async function sendRecordedFile(fileUriOrOptions: string | SendRecordedFi
             fileSize: fileBlob.size,
             duration: duration,
             mimeType: mimeType,
-            notes: [],
+            isArchived: false,
+            title: null,
+            note: null,
             folders: []
         });
 

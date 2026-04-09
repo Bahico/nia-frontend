@@ -1,22 +1,30 @@
+import { NoteTabBar, type DetailTab } from '@/components/note-detail/NoteTabBar';
+import { NoteSummaryModal, OutcomePackView } from '@/components/note-detail/SummaryTab';
+import { TranscriptTab } from '@/components/note-detail/TranscriptTab';
 import { ResponsiveContainer } from '@/components/responsive-container';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useResponsive, useResponsiveValue } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { Note } from '@/models/note.model';
-import { Template } from '@/models/template';
-import { getNote, updateNote } from '@/services/notes.service';
-import {
-  processTranscript,
-  ProcessTranscriptRequest,
-  ProcessTranscriptResponse,
-} from '@/services/process-transcript.service';
-import { getTemplates } from '@/services/template.service';
+import { Note, type NoteDetail } from '@/models/note.model';
+import { getFile } from '@/services/files.service';
+import { getNoteDetail } from '@/services/notes.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+
+function diarizationToText(diarization: NoteDetail['diarization'] | undefined | null): string {
+  const segments = diarization?.segments ?? [];
+  if (segments.length === 0) return '';
+  return segments
+    .map((seg) => {
+      const speaker = seg.speaker?.trim();
+      return speaker ? `${speaker}: ${seg.text}` : seg.text;
+    })
+    .join('\n');
+}
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -50,6 +58,9 @@ export default function NoteDetailScreen() {
   const router = useRouter();
   const noteFromParams = parseNoteFromParams(params);
   const [note, setNote] = useState<Note | null>(noteFromParams);
+  const [noteDetail, setNoteDetail] = useState<NoteDetail | null>(null);
+  const [activeTab, setActiveTab] = useState<DetailTab>('transcript');
+  const [detailLoaded, setDetailLoaded] = useState(false);
   const [loading, setLoading] = useState(!noteFromParams);
   const [error, setError] = useState<string | null>(null);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -57,6 +68,7 @@ export default function NoteDetailScreen() {
   const { isMobile } = useResponsive();
   const textColor = useThemeColor({}, 'text');
   const accentColor = useThemeColor({}, 'accent');
+  const backgroundColor = useThemeColor({}, 'background');
   const paddingVertical = useResponsiveValue({
     mobile: 16,
     tablet: 24,
@@ -69,46 +81,64 @@ export default function NoteDetailScreen() {
   });
 
   const loadNote = useCallback(async () => {
-    console.log('Loading note');
-    
-    const noteId = id ? parseInt(id, 10) : NaN;
-    if (!id || isNaN(noteId)) {
-      console.log('true');
+    const fileId = id ? parseInt(id, 10) : NaN;
+    if (!id || isNaN(fileId)) {
       setError(t('note.invalidNote'));
       setLoading(false);
+      setDetailLoaded(false);
       return;
     }
-    
+
     try {
       setError(null);
-      const data = await getNote(noteId);
-      setNote(data);
-      console.log(data);
-      
-      
+      setDetailLoaded(false);
+      console.log('fileId', fileId);
+      const file = await getFile(fileId);
+      if (!file.note) {
+        setError(t('note.invalidNote'));
+        setLoading(false);
+        setDetailLoaded(false);
+        return;
+      }
+      const detail = await getNoteDetail(file.note.id);
+      setNoteDetail(detail);
+      console.log('detail', detail);
+      setNote({
+        id: detail.id,
+        title: detail.title,
+        content: detail.content,
+        diarizationContent: diarizationToText(detail.diarization) || detail.content || '',
+        summary: detail.summary,
+        isArchived: detail.isArchived,
+        isPinned: detail.isPinned,
+        isUpload: detail.isUpload,
+        viewCount: detail.viewCount,
+        lastViewedAt: detail.lastViewedAt,
+        wordCount: detail.wordCount,
+        readingTimeMinutes: detail.readingTimeMinutes,
+        folders: [],
+      });
     } catch (err) {
       console.error('Error loading note:', err);
       setError(err instanceof Error ? err.message : t('note.failedToLoadNote'));
       setNote(null);
+      setNoteDetail(null);
     } finally {
       setLoading(false);
+      setDetailLoaded(true);
     }
-  }, [id, noteFromParams, t]);
+  }, [id, t]);
 
 
   useEffect(() => {
     loadNote();
-  }, []);
+  }, [loadNote]);
 
   const goBack = () => router.back();
 
-  const updateNoteSummary = useCallback(async (summary: string) => {
-    if (!note) return;
-    console.log(note);
-    
-    const updatedNote = await updateNote({ ...note, summary });
-    setNote(updatedNote);
-  }, [note]);
+  const updateNoteSummary = useCallback(async () => {
+    loadNote();
+  }, [loadNote]);
 
   if (loading) {
     return (
@@ -128,7 +158,7 @@ export default function NoteDetailScreen() {
     );
   }
 
-  if (error || !note) {
+  if (error) {
     return (
       <ThemedView style={styles.container}>
         <ResponsiveContainer style={styles.containerInner}>
@@ -149,6 +179,24 @@ export default function NoteDetailScreen() {
     );
   }
 
+  const diarizationText = diarizationToText(noteDetail?.diarization);
+  const hasNote =
+    Boolean(note?.content?.trim()) ||
+    Boolean(diarizationText.trim()) ||
+    Boolean(note?.summary?.trim());
+  const outcomePacks = noteDetail?.outcomePacks ?? [];
+
+  // Determine which content to show based on active tab
+  const isTranscript = activeTab === 'transcript';
+  const activePackId = !isTranscript ? parseInt(activeTab.replace('pack-', ''), 10) : null;
+  const activePack = activePackId != null
+    ? outcomePacks.find((p) => p.id === activePackId)
+    : null;
+
+  const showTranscriptAction = !hasNote && isTranscript;
+  const hasBottomAction = showTranscriptAction;
+  const scrollPaddingBottom = hasBottomAction ? 140 : 48;
+
   return (
     <ThemedView style={styles.container}>
       <ResponsiveContainer style={styles.containerInner}>
@@ -156,51 +204,74 @@ export default function NoteDetailScreen() {
           <TouchableOpacity onPress={goBack} style={styles.backButton} accessibilityLabel="Go back">
             <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
-          {!note.summary && (
-            <TouchableOpacity
-              style={[styles.addSummaryButton, { borderColor: accentColor }]}
-              onPress={() => setShowSummaryModal(true)}
-            >
-              <ThemedText style={[styles.addSummaryButtonText, { color: accentColor }]}>
-                {t('note.addSummary')}
-              </ThemedText>
-            </TouchableOpacity>
-          )}
         </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <ThemedText
-            type="title"
-            style={[styles.title, titleSize ? { fontSize: titleSize } : undefined]}
-            numberOfLines={isMobile ? 2 : undefined}
-          >
-            {note.title || t('note.noTitle')}
-          </ThemedText>
+        <NoteTabBar
+          activeTab={activeTab}
+          onChangeTab={setActiveTab}
+          accentColor={accentColor}
+          outcomePacks={outcomePacks}
+          onAddPress={() => setShowSummaryModal(true)}
+        />
 
-          {(note.lastViewedAt || note.readingTimeMinutes > 0 || note.wordCount > 0) && (
-            <View style={styles.metaRow}>
-              <ThemedText style={styles.meta}>
-                {note.lastViewedAt && formatDate(note.lastViewedAt) + ' · '}
-                {note.readingTimeMinutes} {t('note.minRead')}
-                {note.wordCount > 0 && ` · ${note.wordCount} ${t('note.words')}`}
+        <View style={styles.pageBody}>
+          <ScrollView
+            key={activeTab}
+            style={styles.scroll}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollPaddingBottom }]}
+            showsVerticalScrollIndicator={false}
+          >
+            <ThemedText
+              type="title"
+              style={[styles.title, titleSize ? { fontSize: titleSize } : undefined]}
+              numberOfLines={isMobile ? 2 : undefined}
+            >
+              {note?.title || t('note.noTitle')}
+            </ThemedText>
+
+            {(note?.lastViewedAt || note?.readingTimeMinutes > 0 || note?.wordCount > 0) && (
+              <View style={styles.metaRow}>
+                <ThemedText style={styles.meta}>
+                  {note?.lastViewedAt && formatDate(note?.lastViewedAt) + ' · '}
+                  {note?.readingTimeMinutes} {t('note.minRead')}
+                  {note?.wordCount > 0 && ` · ${note?.wordCount} ${t('note.words')}`}
+                </ThemedText>
+              </View>
+            )}
+
+            {/* Transcript tab content */}
+            {isTranscript && (
+              <TranscriptTab note={note} noteDetail={noteDetail} hasNote={hasNote} />
+            )}
+
+            {/* Outcome pack tab content */}
+            {activePack && (
+              <OutcomePackView pack={activePack} />
+            )}
+
+            {/* If a pack tab is selected but pack not found */}
+            {!isTranscript && !activePack && (
+              <ThemedText style={styles.emptyTabText}>
+                Summary not found.
               </ThemedText>
+            )}
+          </ScrollView>
+
+          {showTranscriptAction && (
+            <View style={[styles.bottomActionBar, { backgroundColor }]}>
+              <TouchableOpacity
+                style={[styles.bottomActionButton, { borderColor: accentColor }]}
+                onPress={() =>
+                  Alert.alert(t('common.ok'), t('history.reTranscribeComingSoon'))
+                }
+              >
+                <ThemedText style={[styles.bottomActionButtonText, { color: accentColor }]}>
+                  {t('history.reTranscribe')}
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           )}
-
-          <ThemedText style={styles.content}>{note.content || 'No content.'}</ThemedText>
-
-          {note.summary ? (
-            <>
-            <ThemedText type="title" style={styles.summaryTitle}>Summary</ThemedText>
-            <ThemedText style={styles.summary}>{note.summary}</ThemedText>
-            </>
-              
-          ) : null}
-        </ScrollView>
+        </View>
       </ResponsiveContainer>
       <NoteSummaryModal
         visible={showSummaryModal}
@@ -209,158 +280,6 @@ export default function NoteDetailScreen() {
         onSummaryGenerated={updateNoteSummary}
       />
     </ThemedView>
-  );
-}
-
-type NoteSummaryModalProps = {
-  visible: boolean;
-  noteId: number | null;
-  onClose: () => void;
-  onSummaryGenerated: (summary: string) => Promise<void>;
-};
-
-function NoteSummaryModal({ visible, noteId, onClose, onSummaryGenerated }: NoteSummaryModalProps) {
-  const { t } = useTranslation();
-  const accentColor = useThemeColor({}, 'accent');
-  const backgroundColor = useThemeColor({}, 'background');
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
-  const [isProcessingSummary, setIsProcessingSummary] = useState(false);
-  const [processingError, setProcessingError] = useState<string | null>(null);
-
-  const loadTemplates = useCallback(async () => {
-    const data = await getTemplates();
-    setTemplates(data);
-  }, []);
-
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
-  const handleClose = () => {
-    if (isProcessingSummary) return;
-    setSelectedTemplateId(null);
-    setProcessingError(null);
-    onClose();
-  };
-
-  const handleProcessSummary = async () => {
-    if (!noteId || isNaN(noteId) || !selectedTemplateId) {
-      setProcessingError('Please select a template.');
-      return;
-    }
-    const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
-    if (!selectedTemplate) {
-      setProcessingError('Selected template not found.');
-      return;
-    }
-    setIsProcessingSummary(true);
-    setProcessingError(null);
-    try {
-      const payload: ProcessTranscriptRequest = {
-        noteId,
-        templateId: selectedTemplateId,
-        templateType: selectedTemplate.type,
-        type: 'SUMMARY',
-      };
-      const response: ProcessTranscriptResponse = await processTranscript(payload);
-      onSummaryGenerated(response.content);
-      setIsProcessingSummary(false);
-      setSelectedTemplateId(null);
-      onClose();
-    } catch (err) {
-      console.error('Error processing transcript:', err);
-      setProcessingError(err instanceof Error ? err.message : 'Failed to generate summary');
-      setIsProcessingSummary(false);
-    }
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor }]}>
-          <ThemedText type="title" style={styles.modalTitle}>
-            {t('note.addSummary')}
-          </ThemedText>
-          <ThemedText style={styles.modalDescription}>
-            Choose a template to generate a summary for this note. This may take a little while.
-          </ThemedText>
-
-          <ScrollView
-            style={styles.templatesScroll}
-            contentContainerStyle={styles.templatesScrollContent}
-            showsVerticalScrollIndicator={true}
-          >
-            {templates.map((template) => {
-              const isSelected = selectedTemplateId === template.id;
-              return (
-                <TouchableOpacity
-                  key={template.id}
-                  style={[
-                    styles.templateItem,
-                    {
-                      borderColor: isSelected ? accentColor : 'rgba(255,255,255,0.1)',
-                      backgroundColor: isSelected ? 'rgba(255,255,255,0.05)' : 'transparent',
-                    },
-                  ]}
-                  onPress={() => setSelectedTemplateId(template.id)}
-                  disabled={isProcessingSummary}
-                >
-                  <View style={styles.templateHeaderRow}>
-                    <ThemedText style={styles.templateName}>{template.name}</ThemedText>
-                    {template.category ? (
-                      <ThemedText style={styles.templateCategory}>{template.category}</ThemedText>
-                    ) : null}
-                  </View>
-                  {template.description ? (
-                    <ThemedText style={styles.templateDescription}>{template.description}</ThemedText>
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
-            {templates.length === 0 && (
-              <ThemedText style={styles.modalEmptyText}>
-                No templates found. Please create templates first.
-              </ThemedText>
-            )}
-          </ScrollView>
-
-          {processingError ? (
-            <ThemedText style={styles.processingErrorText}>{processingError}</ThemedText>
-          ) : null}
-
-          {isProcessingSummary && (
-            <View style={styles.processingRow}>
-              <ActivityIndicator size="small" color={accentColor} />
-              <ThemedText style={styles.processingText}>Generating summary…</ThemedText>
-            </View>
-          )}
-
-          <View style={styles.modalActionsRow}>
-            <TouchableOpacity
-              style={[styles.modalActionButton, styles.modalCancelButton]}
-              onPress={handleClose}
-              disabled={isProcessingSummary}
-            >
-              <ThemedText style={styles.modalCancelText}>Cancel</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.modalActionButton,
-                styles.modalConfirmButton,
-                { backgroundColor: accentColor, opacity: selectedTemplateId ? 1 : 0.6 },
-              ]}
-              onPress={handleProcessSummary}
-              disabled={isProcessingSummary || !selectedTemplateId}
-            >
-              <ThemedText style={styles.modalConfirmText}>
-                {isProcessingSummary ? 'Generating…' : 'Generate'}
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -437,133 +356,30 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     paddingHorizontal: 32,
   },
-  addSummaryButton: {
-    marginLeft: 'auto',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  addSummaryButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  modalOverlay: {
+  pageBody: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
   },
-  modalContent: {
+  bottomActionBar: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  bottomActionButton: {
     width: '100%',
-    maxWidth: 480,
-    borderRadius: 16,
-    padding: 20,
-  },
-  modalTitle: {
-    marginBottom: 4,
-  },
-  modalDescription: {
-    opacity: 0.75,
-    marginBottom: 16,
-  },
-  modalLoadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    gap: 12,
-  },
-  modalLoadingText: {
-    opacity: 0.8,
-  },
-  modalErrorContainer: {
-    paddingVertical: 16,
-    gap: 12,
-  },
-  modalErrorText: {
-    color: '#ff6b6b',
-  },
-  modalRetryButton: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  modalRetryButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  templatesScroll: {
-    maxHeight: 260,
-    marginBottom: 12,
-  },
-  templatesScrollContent: {
-    paddingVertical: 4,
-    gap: 8,
-  },
-  templateItem: {
     borderRadius: 12,
+    paddingVertical: 14,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  templateHeaderRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    justifyContent: 'center',
   },
-  templateName: {
+  bottomActionButtonText: {
+    fontSize: 16,
     fontWeight: '600',
-    marginRight: 8,
   },
-  templateCategory: {
-    fontSize: 12,
-    opacity: 0.7,
-  },
-  templateDescription: {
-    fontSize: 13,
-    opacity: 0.8,
-  },
-  modalEmptyText: {
+  emptyTabText: {
+    paddingVertical: 28,
+    opacity: 0.65,
     textAlign: 'center',
-    opacity: 0.7,
-    paddingVertical: 16,
-  },
-  processingErrorText: {
-    marginTop: 4,
-    color: '#ff6b6b',
-  },
-  processingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  processingText: {
-    opacity: 0.8,
-  },
-  modalActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 16,
-  },
-  modalActionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
-  },
-  modalCancelButton: {
-    backgroundColor: 'transparent',
-  },
-  modalConfirmButton: {},
-  modalCancelText: {
-    opacity: 0.8,
-  },
-  modalConfirmText: {
-    color: '#000',
-    fontWeight: '600',
+    lineHeight: 24,
   },
 });

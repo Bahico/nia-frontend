@@ -1,17 +1,18 @@
-import { StyleSheet, View, TouchableOpacity, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { Note } from '@/models/note.model';
+import { File } from '@/models/file.model';
+import { Ionicons } from '@expo/vector-icons';
+import { useMemo } from "react";
 import { useTranslation } from 'react-i18next';
+import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export type NoteMoreAction = 're-transcribe' | 'move-to-folder' | 'rename' | 'move-to-trash';
 
 interface NoteItemProps {
-  note: Note;
-  onPress: (note: Note) => void;
-  onMoreAction?: (note: Note, action: NoteMoreAction) => void;
+  file: File;
+  onPress: (note: File) => void;
+  onMoreAction?: (note: File, action: NoteMoreAction) => void;
   moreMenuOpen?: boolean;
   onMorePress?: () => void;
 }
@@ -39,7 +40,7 @@ function truncateSummary(summary: string | undefined, maxLength: number = 150): 
 }
 
 export function NoteItem({
-  note,
+  file,
   onPress,
   onMoreAction,
   moreMenuOpen,
@@ -48,28 +49,33 @@ export function NoteItem({
   const { t } = useTranslation();
   const accentColor = useThemeColor({}, 'accent');
   const textColor = useThemeColor({}, 'text');
+  const note = useMemo(() => file.note, [file]);
 
   const content = (
     <>
       <View style={styles.header}>
         <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={1}>
-          {note.title || 'Untitled'}
+          {!note ? (file.title || file.createdDate?.toLocaleString()) : (note.title || 'Untitled')}
         </ThemedText>
-        <ThemedText style={styles.meta}>
-          {formatDate(note.lastViewedAt)}
-          {note.readingTimeMinutes > 0 && ` • ${note.readingTimeMinutes} min read`}
-        </ThemedText>
+        {note && (
+          <ThemedText style={styles.meta}>
+            {formatDate(note.lastViewedAt)}
+            {` • ${note.readingTimeMinutes} min read`}
+          </ThemedText>
+        )}
       </View>
 
-      <View style={styles.summaryContainer}>
-        <ThemedText style={styles.summary} numberOfLines={3}>
-          {note.summary
-            ? truncateSummary(note.summary)
-            : note.content
-              ? truncateSummary(note.content)
-              : 'No content'}
-        </ThemedText>
-      </View>
+      {note && (
+        <View style={styles.summaryContainer}>
+          <ThemedText style={styles.summary} numberOfLines={3}>
+            {note.summary
+              ? truncateSummary(note.summary)
+              : note.content
+                ? truncateSummary(note.content)
+                : 'No content'}
+          </ThemedText>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <View style={styles.readMoreRow}>
@@ -88,10 +94,10 @@ export function NoteItem({
   ];
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, moreMenuOpen && styles.wrapperMenuOpen]}>
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={() => onPress(note)}
+        onPress={() => onPress(file)}
         style={styles.touchable}
       >
         <ThemedView style={styles.container}>
@@ -115,7 +121,7 @@ export function NoteItem({
                     styles.moreMenuItem,
                     action === 'move-to-trash' && styles.moreMenuItemDanger,
                   ]}
-                  onPress={() => onMoreAction(note, action)}
+                  onPress={() => onMoreAction(file, action)}
                 >
                   <Ionicons
                     name={icon}
@@ -144,6 +150,10 @@ const styles = StyleSheet.create({
   wrapper: {
     position: 'relative',
     marginBottom: 12,
+  },
+  wrapperMenuOpen: {
+    zIndex: 50,
+    elevation: 10,
   },
   touchable: {
     flex: 1,

@@ -38,7 +38,7 @@ export default function RecordScreen() {
     return () => {
       // Cleanup on unmount
       if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current.stopAndUnloadAsync().catch(() => { });
       }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -100,7 +100,7 @@ export default function RecordScreen() {
 
       const { uri, name, mimeType } = result.assets[0];
       setIsSaving(true);
-      await sendRecordedFile({ uri, name, type: mimeType ?? 'audio/mpeg' }, duration);
+      await sendRecordedFile({ uri, name, type: mimeType ?? 'audio/mpeg' }, duration || 1);
       setIsSaving(false);
       setShowSuccessModal(true);
     } catch (error) {
@@ -177,7 +177,7 @@ export default function RecordScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
         >
-          <View style={{...styles.content}}>
+          <View style={{ ...styles.content }}>
             <View style={styles.header}>
               <ThemedText type="title" style={styles.title}>
                 {t('record.recordVoice')}

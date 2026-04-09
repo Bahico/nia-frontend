@@ -1,5 +1,5 @@
-import { Note } from '@/models/note.model';
-import { apiDelete, apiGet, apiPatch, apiPost } from '@/utils/api-client';
+import { Note, NoteDetail } from '@/models/note.model';
+import { apiDelete, apiGet, apiPatch } from '@/utils/api-client';
 
 /**
  * Fetch notes from backend api/notes/for-mobile.
@@ -34,9 +34,8 @@ export async function updateNote(note: Note): Promise<Note> {
 }
 
 /**
- * Update a note by id from backend api/notes/:id
+ * Get a note detail by filePath or id from backend api/notes/detail/:filePathOrId
  */
-export async function noteMoveToFolder(noteId: number, folderId: number): Promise<Note> {
-  console.log('Moving note to folder:', noteId, folderId);
-  return apiPost<Note>(`/notes/move-to-folder`, { folderId: folderId, noteId: noteId });
+export async function getNoteDetail(filePathOrId: string | number): Promise<NoteDetail> {
+  return apiGet<NoteDetail>(`/notes/detail/${filePathOrId}`);
 }

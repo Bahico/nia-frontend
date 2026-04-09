@@ -1,4 +1,5 @@
-import { Note, NoteUser } from "./note.model";
+import { User } from "@/contexts/auth-context";
+import { Note } from "./note.model";
 
 export interface Folder {
     id: number;
@@ -8,6 +9,6 @@ export interface Folder {
     icon: string;
     isDefault: boolean;
     position: number;
-    user: NoteUser;
+    user: User;
     notes: Note[];
   }

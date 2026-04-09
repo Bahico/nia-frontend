@@ -4,11 +4,10 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { File } from '@/models/file.model';
 import { Folder } from '@/models/folder.model';
-import { Note } from '@/models/note.model';
+import { fileMoveToFolder as fileMoveToFolderFunc, getFiles, updateFile } from "@/services/files.service";
 import { createFolder, deleteFolder, getFolders, updateFolder } from '@/services/folder.service';
-import { getFiles } from '@/services/files.service';
-import { noteMoveToFolder, updateNote } from '@/services/notes.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -25,7 +24,6 @@ import {
   TextInput,
   View
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type HistoryFolderId = null | 'trash' | number;
 
@@ -59,7 +57,7 @@ const FOLDER_ICONS: string[] = [
 
 export default function HistoryScreen() {
   const { t } = useTranslation();
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,13 +74,12 @@ export default function HistoryScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [folderMenuFolderId, setFolderMenuFolderId] = useState<number | null>(null);
   const [noteMenuNoteId, setNoteMenuNoteId] = useState<number | null>(null);
-  const [noteMoveToFolderNote, setNoteMoveToFolderNote] = useState<Note | null>(null);
-  const [noteRenameNote, setNoteRenameNote] = useState<Note | null>(null);
+  const [fileMoveToFolder, setFileMoveToFolder] = useState<File | null>(null);
+  const [fileRename, setFileRename] = useState<File | null>(null);
   const [renameInput, setRenameInput] = useState('');
 
   const router = useRouter();
   const { isTablet, isDesktop } = useResponsive();
-  const insets = useSafeAreaInsets();
   const accentColor = useThemeColor({}, 'tint');
   const sheetBackground = useThemeColor({}, 'tabBarBackground');
 
@@ -93,10 +90,10 @@ export default function HistoryScreen() {
     return folder?.name ?? t('history.allFiles');
   }, [selectedFolderId, folders, t]);
 
-  const filteredNotes = useMemo(() => {
-    if (selectedFolderId === TRASH_ID) return notes.filter((n) => n.isArchived);
-    return notes;
-  }, [notes, selectedFolderId]);
+  const filteredFiles = useMemo(() => {
+    if (selectedFolderId === TRASH_ID) return files.filter((n) => n.isArchived);
+    return files.filter((n) => !n.isArchived);
+  }, [files, selectedFolderId]);
 
   const loadFolders = useCallback(async () => {
     try {
@@ -111,56 +108,17 @@ export default function HistoryScreen() {
   const loadNotes = useCallback(async () => {
     try {
       setError(null);
-
-      // Load files with their notes and folders
-      const files = await getFiles();
-
-      const hasNotes = (notes: Note[] | undefined | null): notes is Note[] =>
-        Array.isArray(notes) && notes.length > 0;
-
-      // Only consider files that actually have notes
-      let filesWithNotes = files.filter((file) => hasNotes(file.notes));
-
-      // Apply folder filter on files (by file.folders) if a concrete folder is selected
       const folderId =
         typeof selectedFolderId === 'number' ? selectedFolderId : undefined;
-
-      if (folderId != null) {
-        filesWithNotes = filesWithNotes.filter((file) =>
-          Array.isArray(file.folders) &&
-          file.folders.some((folder) => folder.id === folderId)
-        );
-      }
-
-      // For each file, pick the last relevant note:
-      // - In trash view -> last archived note
-      // - In normal view -> last non-archived note
-      const latestNotes: Note[] = filesWithNotes
-        .map((file) => {
-          const candidateNotes =
-            selectedFolderId === TRASH_ID
-              ? file.notes.filter((note) => note.isArchived)
-              : file.notes.filter((note) => !note.isArchived);
-
-          if (candidateNotes.length === 0) {
-            return null;
-          }
-
-          const sorted = [...candidateNotes].sort((a, b) => {
-            const aTime = new Date(a.lastViewedAt).getTime();
-            const bTime = new Date(b.lastViewedAt).getTime();
-            return aTime - bTime;
-          });
-
-          return sorted[sorted.length - 1];
-        })
-        .filter((note): note is Note => note != null);
-
-      setNotes(latestNotes);
+      const data = await getFiles(
+        folderId != null ? { 'foldersId.equals': folderId } : undefined
+      );
+      console.log('data', data);
+      setFiles(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error loading notes (from files):', err);
+      console.error('Error loading notes:', err);
       setError(err instanceof Error ? err.message : t('history.failedToLoadNotes'));
-      setNotes([]);
+      setFiles([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -275,20 +233,25 @@ export default function HistoryScreen() {
     }
   }, [editingFolder, formName, formColor, formIcon, folders.length, loadFolders, closeFolderForm, t]);
 
-  const handleNotePress = (note: Note) => {
+  const handleNotePress = (file: File) => {
+    const note = file.note;
     router.push({
       pathname: '/note/[id]',
       params: {
-        id: String(note.id),
-        note: JSON.stringify({
-          id: note.id,
-          title: note.title,
-          content: note.content,
-          summary: note.summary,
-          lastViewedAt: note.lastViewedAt,
-          readingTimeMinutes: note.readingTimeMinutes,
-          wordCount: note.wordCount,
-        }),
+        id: String(file.id),
+        note: JSON.stringify(
+          note
+            ? {
+              id: note.id,
+              title: note.title,
+              content: note.content,
+              summary: note.summary,
+              lastViewedAt: note.lastViewedAt,
+              readingTimeMinutes: note.readingTimeMinutes,
+              wordCount: note.wordCount,
+            }
+            : null
+        ),
       },
     });
   };
@@ -298,7 +261,7 @@ export default function HistoryScreen() {
   }, []);
 
   const handleNoteMoreAction = useCallback(
-    async (note: Note, action: NoteMoreAction) => {
+    async (file: File, action: NoteMoreAction) => {
       setNoteMenuNoteId(null);
       try {
         if (action === 're-transcribe') {
@@ -306,16 +269,16 @@ export default function HistoryScreen() {
           return;
         }
         if (action === 'move-to-folder') {
-          setNoteMoveToFolderNote(note);
+          setFileMoveToFolder(file);
           return;
         }
         if (action === 'rename') {
-          setNoteRenameNote(note);
-          setRenameInput(note.title || '');
+          setFileRename(file);
+          setRenameInput(file.title || '');
           return;
         }
         if (action === 'move-to-trash') {
-          await updateNote({ ...note, isArchived: true });
+          await updateFile({ ...file, isArchived: true });
           await loadNotes();
         }
       } catch (err) {
@@ -331,10 +294,10 @@ export default function HistoryScreen() {
 
   const handleMoveToFolderSelect = useCallback(
     async (folderId: number) => {
-      if (!noteMoveToFolderNote) return;
+      if (!fileMoveToFolder) return;
       try {
-        await noteMoveToFolder(noteMoveToFolderNote.id, folderId);
-        setNoteMoveToFolderNote(null);
+        await fileMoveToFolderFunc(fileMoveToFolder.id, folderId);
+        setFileMoveToFolder(null);
         await loadNotes();
       } catch (err) {
         console.error('Move to folder failed:', err);
@@ -344,15 +307,16 @@ export default function HistoryScreen() {
         );
       }
     },
-    [noteMoveToFolderNote, loadNotes, t]
+    [fileMoveToFolder, loadNotes, t]
   );
 
   const handleRenameSubmit = useCallback(async () => {
-    if (!noteRenameNote) return;
-    const newTitle = renameInput.trim() || noteRenameNote.title;
+    if (!fileRename) return;
+    const newTitle = renameInput.trim() || fileRename.fileName;
     try {
-      await updateNote({ ...noteRenameNote, title: newTitle });
-      setNoteRenameNote(null);
+      console.log('fileRename', { ...fileRename, title: newTitle });
+      await updateFile({ ...fileRename, title: newTitle });
+      setFileRename(null);
       setRenameInput('');
       await loadNotes();
     } catch (err) {
@@ -362,11 +326,11 @@ export default function HistoryScreen() {
         err instanceof Error ? err.message : t('history.failedToLoadNotes')
       );
     }
-  }, [noteRenameNote, renameInput, loadNotes, t]);
+  }, [fileRename, renameInput, loadNotes, t]);
 
-  const renderItem = ({ item }: { item: Note }) => (
+  const renderItem = ({ item }: { item: File }) => (
     <NoteItem
-      note={item}
+      file={item}
       onPress={handleNotePress}
       onMoreAction={handleNoteMoreAction}
       moreMenuOpen={noteMenuNoteId === item.id}
@@ -432,7 +396,7 @@ export default function HistoryScreen() {
           {/* <ThemedText type="title" style={styles.title}>
             {t('history.title')}
           </ThemedText> */}
-          
+
           <View style={styles.headerRow}>
             <Pressable
               style={({ pressed }) => [styles.folderRow, pressed && styles.folderRowPressed]}
@@ -445,12 +409,12 @@ export default function HistoryScreen() {
         </View>
 
         <FlatList
-          data={filteredNotes}
+          data={filteredFiles}
           renderItem={renderItem}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={[
             styles.listContent,
-            filteredNotes.length === 0 && styles.listContentEmpty,
+            filteredFiles.length === 0 && styles.listContentEmpty,
           ]}
           ListEmptyComponent={error ? renderError : renderEmpty}
           refreshControl={
@@ -607,120 +571,120 @@ export default function HistoryScreen() {
                 showsVerticalScrollIndicator={true}
                 keyboardShouldPersistTaps="handled"
               >
-              <ThemedText type="title" style={styles.formTitle}>
-                {editingFolder ? t('history.editFolder') : t('history.newFolder')}
-              </ThemedText>
+                <ThemedText type="title" style={styles.formTitle}>
+                  {editingFolder ? t('history.editFolder') : t('history.newFolder')}
+                </ThemedText>
 
-              <ThemedText style={styles.formLabel}>{t('common.name')}</ThemedText>
-              <TextInput
-                style={[styles.formInput, { color: '#fff' }]}
-                placeholder={t('history.folderName')}
-                placeholderTextColor="rgba(255,255,255,0.5)"
-                value={formName}
-                onChangeText={setFormName}
-                editable={!formSaving}
-              />
+                <ThemedText style={styles.formLabel}>{t('common.name')}</ThemedText>
+                <TextInput
+                  style={[styles.formInput, { color: '#fff' }]}
+                  placeholder={t('history.folderName')}
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  value={formName}
+                  onChangeText={setFormName}
+                  editable={!formSaving}
+                />
 
-              <ThemedText style={styles.formLabel}>{t('history.color')}</ThemedText>
-              <View style={styles.colorRow}>
-                {FOLDER_COLORS.map((color) => (
+                <ThemedText style={styles.formLabel}>{t('history.color')}</ThemedText>
+                <View style={styles.colorRow}>
+                  {FOLDER_COLORS.map((color) => (
+                    <Pressable
+                      key={color}
+                      style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        formColor === color && styles.colorOptionSelected,
+                      ]}
+                      onPress={() => setFormColor(color)}
+                    >
+                      {formColor === color && (
+                        <Ionicons name="checkmark" size={18} color="#000" />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+
+                <ThemedText style={styles.formLabel}>{t('history.icon')}</ThemedText>
+                <View style={styles.iconDropdownWrapper}>
                   <Pressable
-                    key={color}
-                    style={[
-                      styles.colorOption,
-                      { backgroundColor: color },
-                      formColor === color && styles.colorOptionSelected,
-                    ]}
-                    onPress={() => setFormColor(color)}
+                    style={styles.iconDropdown}
+                    onPress={() => setIconDropdownOpen((v) => !v)}
+                    disabled={formSaving}
                   >
-                    {formColor === color ? (
-                      <Ionicons name="checkmark" size={18} color="#000" />
-                    ) : null}
+                    <Ionicons
+                      name={(formIcon as keyof typeof Ionicons.glyphMap) || 'folder-outline'}
+                      size={24}
+                      color="#fff"
+                    />
+                    <Ionicons
+                      name={iconDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color="#fff"
+                    />
                   </Pressable>
-                ))}
-              </View>
-
-              <ThemedText style={styles.formLabel}>{t('history.icon')}</ThemedText>
-              <View style={styles.iconDropdownWrapper}>
-                <Pressable
-                  style={styles.iconDropdown}
-                  onPress={() => setIconDropdownOpen((v) => !v)}
-                  disabled={formSaving}
-                >
-                  <Ionicons
-                    name={(formIcon as keyof typeof Ionicons.glyphMap) || 'folder-outline'}
-                    size={24}
-                    color="#fff"
-                  />
-                  <Ionicons
-                    name={iconDropdownOpen ? 'chevron-up' : 'chevron-down'}
-                    size={20}
-                    color="#fff"
-                  />
-                </Pressable>
-                {iconDropdownOpen ? (
-                  <View style={[styles.iconDropdownList, { backgroundColor: sheetBackground }]}>
-                    <View style={styles.iconGrid}>
-                      {FOLDER_ICONS.map((iconValue) => (
-                        <Pressable
-                          key={iconValue}
-                          style={[
-                            styles.iconGridCell,
-                            formIcon === iconValue && styles.iconGridCellSelected,
-                          ]}
-                          onPress={() => {
-                            setFormIcon(iconValue);
-                            setIconDropdownOpen(false);
-                          }}
-                        >
-                          <Ionicons
-                            name={iconValue as keyof typeof Ionicons.glyphMap}
-                            size={26}
-                            color="#fff"
-                          />
-                        </Pressable>
-                      ))}
+                  {iconDropdownOpen ? (
+                    <View style={[styles.iconDropdownList, { backgroundColor: sheetBackground }]}>
+                      <View style={styles.iconGrid}>
+                        {FOLDER_ICONS.map((iconValue) => (
+                          <Pressable
+                            key={iconValue}
+                            style={[
+                              styles.iconGridCell,
+                              formIcon === iconValue && styles.iconGridCellSelected,
+                            ]}
+                            onPress={() => {
+                              setFormIcon(iconValue);
+                              setIconDropdownOpen(false);
+                            }}
+                          >
+                            <Ionicons
+                              name={iconValue as keyof typeof Ionicons.glyphMap}
+                              size={26}
+                              color="#fff"
+                            />
+                          </Pressable>
+                        ))}
+                      </View>
                     </View>
-                  </View>
-                ) : null}
-              </View>
+                  ) : null}
+                </View>
 
-              {formError ? (
-                <ThemedText style={styles.formError}>{formError}</ThemedText>
-              ) : null}
+                {formError && (
+                  <ThemedText style={styles.formError}>{formError}</ThemedText>
+                )}
 
-              <View style={styles.formActions}>
-                <Pressable
-                  style={[styles.formButton, styles.formCancelButton]}
-                  onPress={closeFolderForm}
-                  disabled={formSaving}
-                >
-                  <ThemedText style={styles.formCancelText}>{t('common.cancel')}</ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[styles.formButton, { backgroundColor: accentColor }]}
-                  onPress={saveFolderForm}
-                  disabled={formSaving}
-                >
-                  {formSaving ? (
-                    <ActivityIndicator size="small" color="#000" />
-                  ) : (
-                    <ThemedText style={styles.formSaveText}>{t('common.save')}</ThemedText>
-                  )}
-                </Pressable>
-              </View>
+                <View style={styles.formActions}>
+                  <Pressable
+                    style={[styles.formButton, styles.formCancelButton]}
+                    onPress={closeFolderForm}
+                    disabled={formSaving}
+                  >
+                    <ThemedText style={styles.formCancelText}>{t('common.cancel')}</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.formButton, { backgroundColor: accentColor }]}
+                    onPress={saveFolderForm}
+                    disabled={formSaving}
+                  >
+                    {formSaving ? (
+                      <ActivityIndicator size="small" color="#000" />
+                    ) : (
+                      <ThemedText style={styles.formSaveText}>{t('common.save')}</ThemedText>
+                    )}
+                  </Pressable>
+                </View>
               </ScrollView>
             </Pressable>
           </Pressable>
         </Modal>
 
         <Modal
-          visible={noteMoveToFolderNote != null}
+          visible={fileMoveToFolder != null}
           transparent
           animationType="slide"
-          onRequestClose={() => setNoteMoveToFolderNote(null)}
+          onRequestClose={() => setFileMoveToFolder(null)}
         >
-          <Pressable style={[styles.sheetOverlay]} onPress={() => setNoteMoveToFolderNote(null)}>
+          <Pressable style={[styles.sheetOverlay]} onPress={() => setFileMoveToFolder(null)}>
             <Pressable
               style={[styles.sheetContent, { backgroundColor: sheetBackground }]}
               onPress={(e) => e.stopPropagation()}
@@ -754,7 +718,7 @@ export default function HistoryScreen() {
               </ScrollView>
               <Pressable
                 style={[styles.formButton, styles.formCancelButton, { marginHorizontal: 16, marginBottom: 16 }]}
-                onPress={() => setNoteMoveToFolderNote(null)}
+                onPress={() => setFileMoveToFolder(null)}
               >
                 <ThemedText style={styles.formCancelText}>{t('common.cancel')}</ThemedText>
               </Pressable>
@@ -763,19 +727,21 @@ export default function HistoryScreen() {
         </Modal>
 
         <Modal
-          visible={noteRenameNote != null}
+          visible={fileRename != null}
           transparent
-          animationType="slide"
-          onRequestClose={() => setNoteRenameNote(null)}
+          animationType="fade"
+          onRequestClose={() => setFileRename(null)}
         >
-          <Pressable style={[styles.sheetOverlay]} onPress={() => setNoteRenameNote(null)}>
+          <Pressable style={styles.centeredOverlay} onPress={() => setFileRename(null)}>
             <Pressable
-              style={[styles.formSheetContent, { backgroundColor: sheetBackground }]}
+              style={[styles.renameCard, { backgroundColor: sheetBackground }]}
               onPress={(e) => e.stopPropagation()}
             >
-              <View style={styles.sheetHandle} />
               <ThemedText type="title" style={styles.formTitle}>
                 {t('history.renameNote')}
+              </ThemedText>
+              <ThemedText style={styles.renameDescription}>
+                {t('history.renameNoteDescription')}
               </ThemedText>
               <ThemedText style={styles.formLabel}>{t('history.noteTitle')}</ThemedText>
               <TextInput
@@ -789,7 +755,7 @@ export default function HistoryScreen() {
               <View style={styles.formActions}>
                 <Pressable
                   style={[styles.formButton, styles.formCancelButton]}
-                  onPress={() => setNoteRenameNote(null)}
+                  onPress={() => setFileRename(null)}
                 >
                   <ThemedText style={styles.formCancelText}>{t('common.cancel')}</ThemedText>
                 </Pressable>
@@ -828,7 +794,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 160,
   },
   listContentEmpty: {
     flexGrow: 1,
@@ -890,6 +856,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  centeredOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 16,
   },
   sheetContent: {
     borderTopLeftRadius: 16,
@@ -961,7 +934,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginLeft: 4,
   },
-   folderMenu: {
+  folderMenu: {
     position: 'absolute',
     bottom: '100%',
     right: 0,
@@ -996,6 +969,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     maxHeight: '85%',
   },
+  renameCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
   formScroll: {
     maxHeight: 500,
   },
@@ -1006,6 +986,12 @@ const styles = StyleSheet.create({
   formTitle: {
     marginBottom: 20,
     textAlign: 'center',
+  },
+  renameDescription: {
+    fontSize: 13,
+    opacity: 0.7,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   formLabel: {
     fontSize: 14,
