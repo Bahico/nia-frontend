@@ -432,6 +432,7 @@ const styles = StyleSheet.create({
   templateName: {
     fontWeight: '600',
     marginRight: 8,
+    width: '80%',
   },
   templateCategory: {
     fontSize: 12,

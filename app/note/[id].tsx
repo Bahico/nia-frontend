@@ -4,14 +4,16 @@ import { TranscriptTab } from '@/components/note-detail/TranscriptTab';
 import { ResponsiveContainer } from '@/components/responsive-container';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/contexts/auth-context';
 import { useResponsive, useResponsiveValue } from '@/hooks/use-responsive';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { type File as FileModel } from '@/models/file.model';
 import { Note, type NoteDetail } from '@/models/note.model';
-import { getFile } from '@/services/files.service';
+import { getFile, getFileStatus, transcribeFile } from '@/services/files.service';
 import { getNoteDetail } from '@/services/notes.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -56,14 +58,18 @@ export default function NoteDetailScreen() {
   const params = useLocalSearchParams<{ id: string; note?: string }>();
   const { id } = params;
   const router = useRouter();
+  const { user } = useAuth();
   const noteFromParams = parseNoteFromParams(params);
+  const [file, setFile] = useState<FileModel | null>(null);
   const [note, setNote] = useState<Note | null>(noteFromParams);
   const [noteDetail, setNoteDetail] = useState<NoteDetail | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>('transcript');
   const [detailLoaded, setDetailLoaded] = useState(false);
   const [loading, setLoading] = useState(!noteFromParams);
   const [error, setError] = useState<string | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { isMobile } = useResponsive();
   const textColor = useThemeColor({}, 'text');
@@ -93,14 +99,19 @@ export default function NoteDetailScreen() {
       setError(null);
       setDetailLoaded(false);
       console.log('fileId', fileId);
-      const file = await getFile(fileId);
-      if (!file.note) {
-        setError(t('note.invalidNote'));
+      const fileData = await getFile(fileId);
+      setFile(fileData);
+      console.log('fileData', fileData);
+
+      // File exists but note hasn't been created yet — this is a valid state
+      if (!fileData.note) {
+        setNote(null);
+        setNoteDetail(null);
         setLoading(false);
-        setDetailLoaded(false);
+        setDetailLoaded(true);
         return;
       }
-      const detail = await getNoteDetail(file.note.id);
+      const detail = await getNoteDetail(fileData.note.id);
       setNoteDetail(detail);
       console.log('detail', detail);
       setNote({
@@ -134,11 +145,78 @@ export default function NoteDetailScreen() {
     loadNote();
   }, [loadNote]);
 
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, []);
+
   const goBack = () => router.back();
 
   const updateNoteSummary = useCallback(async () => {
     loadNote();
   }, [loadNote]);
+
+  const handleTranscribe = useCallback(async () => {
+    if (!file) return;
+    try {
+      setTranscribing(true);
+      const result = await transcribeFile({
+        context: '',
+        language: 'en',
+        audioFileKey: file.filePath,
+        currentUserLogin: user?.email ?? '',
+        transcriptModel: 'GROQ',
+      });
+      console.log('Transcription initiated:', result);
+
+      // Start polling every 5 seconds to check transcription status
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const statusResult = await getFileStatus(file.filePath);
+          console.log('Transcription status:', statusResult.status);
+
+          if (statusResult.status === 'SUCCESS') {
+            // Transcription is done — stop polling and reload note
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            await loadNote();
+            setTranscribing(false);
+          } else if (statusResult.status === 'FAILED') {
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            setTranscribing(false);
+            Alert.alert(
+              t('common.error'),
+              t('note.transcribeFailed')
+            );
+          }
+        } catch (pollErr) {
+          console.error('Status polling error:', pollErr);
+          // Don't stop polling on transient errors, keep trying
+        }
+      }, 5000);
+    } catch (err) {
+      console.error('Transcription failed:', err);
+      setTranscribing(false);
+      Alert.alert(
+        t('common.error'),
+        err instanceof Error ? err.message : t('note.transcribeFailed')
+      );
+    }
+  }, [file, user, loadNote, t]);
 
   if (loading) {
     return (
@@ -179,6 +257,7 @@ export default function NoteDetailScreen() {
     );
   }
 
+  const noteNotCreated = file && !note && !noteDetail;
   const diarizationText = diarizationToText(noteDetail?.diarization);
   const hasNote =
     Boolean(note?.content?.trim()) ||
@@ -193,8 +272,9 @@ export default function NoteDetailScreen() {
     ? outcomePacks.find((p) => p.id === activePackId)
     : null;
 
-  const showTranscriptAction = !hasNote && isTranscript;
-  const hasBottomAction = showTranscriptAction;
+  const showTranscriptAction = !hasNote && isTranscript && !noteNotCreated;
+  const showTranscribeAction = noteNotCreated;
+  const hasBottomAction = showTranscriptAction || showTranscribeAction;
   const scrollPaddingBottom = hasBottomAction ? 140 : 48;
 
   return (
@@ -223,10 +303,10 @@ export default function NoteDetailScreen() {
           >
             <ThemedText
               type="title"
-              style={[styles.title, titleSize ? { fontSize: titleSize } : undefined]}
+              style={[styles.title, titleSize != null ? { fontSize: titleSize } : undefined]}
               numberOfLines={isMobile ? 2 : undefined}
             >
-              {note?.title || t('note.noTitle')}
+              {note?.title || file?.title || t('note.noTitle')}
             </ThemedText>
 
             {(note?.lastViewedAt || note?.readingTimeMinutes > 0 || note?.wordCount > 0) && (
@@ -240,7 +320,7 @@ export default function NoteDetailScreen() {
             )}
 
             {/* Transcript tab content */}
-            {isTranscript && (
+            {isTranscript && !noteNotCreated && (
               <TranscriptTab note={note} noteDetail={noteDetail} hasNote={hasNote} />
             )}
 
@@ -256,6 +336,32 @@ export default function NoteDetailScreen() {
               </ThemedText>
             )}
           </ScrollView>
+
+          {/* No note created yet — show transcribe CTA */}
+          {showTranscribeAction && (
+            <View style={[styles.noNoteContainer]}>
+              <Ionicons name="document-text-outline" size={64} color="rgba(255, 255, 255, 0.2)" />
+              <ThemedText style={styles.noNoteText}>
+                {t('note.noTranscriptYet')}
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.transcribeButton, { backgroundColor: accentColor }]}
+                onPress={handleTranscribe}
+                disabled={transcribing}
+              >
+                {transcribing ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="mic-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                    <ThemedText style={styles.transcribeButtonText}>
+                      {t('note.transcribe')}
+                    </ThemedText>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
           {showTranscriptAction && (
             <View style={[styles.bottomActionBar, { backgroundColor }]}>
@@ -381,5 +487,34 @@ const styles = StyleSheet.create({
     opacity: 0.65,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  noNoteContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 48,
+  },
+  noNoteText: {
+    fontSize: 15,
+    opacity: 0.55,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    lineHeight: 22,
+  },
+  transcribeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    marginTop: 8,
+    minWidth: 180,
+  },
+  transcribeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

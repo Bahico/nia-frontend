@@ -145,6 +145,9 @@
     "noTitle": "Nomisiz",
     "addSummary": "Qisqacha mazmun qoʻshish",
     "minRead": "daqiqa oʻqish",
-    "words": "soʻz"
+    "words": "soʻz",
+    "noTranscriptYet": "Bu fayl hali transkripsiya qilinmagan. Transkripsiyani boshlash uchun quyidagi tugmani bosing.",
+    "transcribe": "Transkripsiya qilish",
+    "transcribeFailed": "Transkripsiyani boshlab boʻlmadi. Qayta urinib koʻring."
   }
 }

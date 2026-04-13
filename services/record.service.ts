@@ -1,6 +1,6 @@
-import { apiPost } from "@/utils/api-client";
 import uuid from 'react-native-uuid';
 import { createFile } from "./files.service";
+import { getSignedUrl } from './google-cloud-storage.service';
 
 export type SendRecordedFileOptions = {
     uri: string;
@@ -70,10 +70,6 @@ export async function sendRecordedFile(fileUriOrOptions: string | SendRecordedFi
 
 export async function reTranscribe(data: { noteId: number }) {
 
-}
-
-export async function getSignedUrl(fileName: string) {
-    return apiPost<{ url: string }>(`/google-cloud-storage/signed-url`, { filename: fileName });
 }
 
 export async function fileUploadToGCS(signedUrl: string, file: Blob) {

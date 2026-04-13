@@ -18,7 +18,7 @@ export async function getFile(id: number): Promise<File> {
 /**
  * Create a file from backend api/files
  */
-export async function createFile(file: Omit<File, 'id' | 'user' >): Promise<File> {
+export async function createFile(file: Omit<File, 'id' | 'user'>): Promise<File> {
     return apiPost<File>('/files', file);
 }
 
@@ -35,4 +35,21 @@ export async function updateFile(file: File): Promise<File> {
 export async function fileMoveToFolder(fileId: number, folderId: number): Promise<File> {
     console.log('Moving file to folder:', fileId, folderId);
     return apiPost<File>(`/files/move-to-folder`, { folderId: folderId, fileId: fileId });
-  }
+}
+
+/**
+ * Trigger transcription for a file that doesn't have a note yet.
+ */
+export async function transcribeFile(data: {
+    context: string,
+    language: string, // en
+    audioFileKey: string,
+    currentUserLogin: string,
+    transcriptModel: string // GROQ
+}) {
+    return apiPost<{ id: number; status: string; filePath: string; }>(`/transcript/v2`, data);
+}
+
+export async function getFileStatus(filePathOrId: string) {
+    return apiGet<{ id: number; status: string; filePath: string; }>(`/transcript/status/v2/${filePathOrId}`);
+}

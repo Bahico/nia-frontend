@@ -145,6 +145,9 @@
     "noTitle": "No title",
     "addSummary": "Add summary",
     "minRead": "min read",
-    "words": "words"
+    "words": "words",
+    "noTranscriptYet": "This file hasn't been transcribed yet. Tap the button below to start transcription.",
+    "transcribe": "Transcribe",
+    "transcribeFailed": "Failed to start transcription. Please try again."
   }
 }
